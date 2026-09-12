@@ -11,7 +11,7 @@ const BASE_URL = 'https://baak.unama.ac.id/jadwal-kuliah';
 export async function scrapeLabSchedulePage(page = 1, ruang = ''): Promise<ScrapePageResult> {
   const ruangParam = ruang ? `&ruang=${encodeURIComponent(ruang)}` : '';
   const url = `${BASE_URL}?search=1${ruangParam}&page=${page}`;
-  
+
   let res: Response | null = null;
   let lastError: any = null;
 
@@ -110,15 +110,15 @@ export async function scrapeLabSchedulePage(page = 1, ruang = ''): Promise<Scrap
     // Ruang: "Kampus Thehok, Labor 1.5"
     const rawRuang = $(tds[3]).text().trim();
     let kampus = '';
-    let ruangLabor = '';
+    let ruangan = '';
 
     if (rawRuang.includes(',')) {
       const parts = rawRuang.split(',').map((s) => s.trim());
       kampus = parts[0] || '';
-      ruangLabor = parts.slice(1).join(', ').trim();
+      ruangan = parts.slice(1).join(', ').trim();
     } else {
       kampus = 'Kampus Thehok';
-      ruangLabor = rawRuang;
+      ruangan = rawRuang;
     }
 
     // Status: ambil hanya teks status (buang <sup> "Updated By: ..." dsb.)
@@ -139,7 +139,7 @@ export async function scrapeLabSchedulePage(page = 1, ruang = ''): Promise<Scrap
       kodeKelas,
       mataKuliah,
       kampus,
-      ruangLabor,
+      ruangan,
       status,
     });
   });

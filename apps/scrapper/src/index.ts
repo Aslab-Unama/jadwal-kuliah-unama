@@ -35,7 +35,7 @@ async function main() {
         Kelas: item.kodeKelas,
         MataKuliah: item.mataKuliah,
         Kampus: item.kampus,
-        Ruang: item.ruangLabor,
+        Ruang: item.ruangan,
         Status: item.status,
       }))
     );
