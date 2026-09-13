@@ -2,9 +2,25 @@ import { Elysia, t } from 'elysia';
 import { cors } from '@elysiajs/cors';
 import { db, jadwalLab, eq, ilike, and, or, desc, asc, sql } from '@jadwal/db';
 import { httpLogger, log } from './logger';
+import { getCachedAllJadwal, setCachedAllJadwal, invalidateAllJadwalCache } from './redis';
+import { InMemoryRateLimiter } from './rate-limiter';
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
 const HOST = process.env.HOST || '0.0.0.0';
+
+// Global API Limiter: 100 request per menit per IP (cukup sangat leluasa untuk user normal, memblokir banjir bot/DDoS)
+const apiRateLimiter = new InMemoryRateLimiter({
+  windowMs: 60 * 1000,
+  maxRequests: 100,
+  message: 'Terlalu banyak request. Akses dibatasi demi keamanan server & Redis.',
+});
+
+// Auth Route Limiter: 10 request per menit per IP (mencegah brute force secret code)
+const authRateLimiter = new InMemoryRateLimiter({
+  windowMs: 60 * 1000,
+  maxRequests: 10,
+  message: 'Terlalu banyak percobaan login. Coba lagi dalam 1 menit.',
+});
 
 export const app = new Elysia()
   .use(
@@ -15,6 +31,49 @@ export const app = new Elysia()
     })
   )
   .use(httpLogger)
+  .onBeforeHandle(({ request, set }) => {
+    // Ekstraksi Client IP dari Reverse Proxy / Cloudflare / Direct Connection
+    const forwarded = request.headers.get('x-forwarded-for');
+    const realIp = request.headers.get('x-real-ip');
+    const cfIp = request.headers.get('cf-connecting-ip');
+    const clientIp = (cfIp || realIp || (forwarded ? forwarded.split(',')[0].trim() : '127.0.0.1')) || 'unknown';
+
+    const url = new URL(request.url);
+
+    // Rate limit khusus endpoint auth (anti brute-force)
+    if (url.pathname.startsWith('/api/auth/login')) {
+      const authLimit = authRateLimiter.check(clientIp);
+      if (!authLimit.allowed) {
+        set.status = 429;
+        set.headers['Retry-After'] = Math.ceil(authLimit.resetMs / 1000).toString();
+        return {
+          success: false,
+          error: 'RateLimitExceeded',
+          message: authRateLimiter.getMessage(),
+          retryAfterSeconds: Math.ceil(authLimit.resetMs / 1000),
+        };
+      }
+    }
+
+    // Rate limit umum untuk semua route API
+    if (url.pathname.startsWith('/api/')) {
+      const check = apiRateLimiter.check(clientIp);
+      set.headers['X-RateLimit-Limit'] = '100';
+      set.headers['X-RateLimit-Remaining'] = check.remaining.toString();
+      set.headers['X-RateLimit-Reset'] = Math.ceil(check.resetMs / 1000).toString();
+
+      if (!check.allowed) {
+        set.status = 429;
+        set.headers['Retry-After'] = Math.ceil(check.resetMs / 1000).toString();
+        return {
+          success: false,
+          error: 'RateLimitExceeded',
+          message: apiRateLimiter.getMessage(),
+          retryAfterSeconds: Math.ceil(check.resetMs / 1000),
+        };
+      }
+    }
+  })
   .get('/', () => ({
     success: true,
     message: 'Jadwal Kuliah UNAMA API is running',
@@ -70,14 +129,50 @@ export const app = new Elysia()
           const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
           if (isAll) {
+            // 1. Cek Multi-Layer Cache (L1 Memory / L2 Redis)
+            if (conditions.length === 0) {
+              const cached = await getCachedAllJadwal<any[]>();
+              if (cached && Array.isArray(cached.data) && cached.data.length > 0) {
+                return {
+                  success: true,
+                  source: cached.source,
+                  pagination: {
+                    total: cached.data.length,
+                    limit: cached.data.length,
+                    offset: 0,
+                    hasMore: false,
+                  },
+                  data: cached.data,
+                };
+              }
+            }
+
+            // 2. Cache MISS: Query Supabase PostgreSQL dengan kolom esensial (tanpa createdAt/updatedAt agar payload ringan)
             const items = await db
-              .select()
+              .select({
+                id: jadwalLab.id,
+                hari: jadwalLab.hari,
+                tanggal: jadwalLab.tanggal,
+                waktuMulai: jadwalLab.waktuMulai,
+                dosen: jadwalLab.dosen,
+                kodeKelas: jadwalLab.kodeKelas,
+                mataKuliah: jadwalLab.mataKuliah,
+                kampus: jadwalLab.kampus,
+                ruangan: jadwalLab.ruangan,
+                status: jadwalLab.status,
+              })
               .from(jadwalLab)
               .where(whereClause)
               .orderBy(asc(jadwalLab.waktuMulai), asc(jadwalLab.id));
 
+            // 3. Simpan ke Redis jika query tanpa filter tambahan
+            if (conditions.length === 0 && items.length > 0) {
+              await setCachedAllJadwal(items);
+            }
+
             return {
               success: true,
+              source: 'database',
               pagination: {
                 total: items.length,
                 limit: items.length,
@@ -331,6 +426,13 @@ export const app = new Elysia()
             message: 'Sesi tidak valid',
           };
         }
+      })
+      .post('/cache/clear', async () => {
+        await invalidateAllJadwalCache();
+        return {
+          success: true,
+          message: 'Cache Redis jadwal berhasil dibersihkan',
+        };
       })
   )
   .listen({

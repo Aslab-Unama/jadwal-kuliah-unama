@@ -9,6 +9,7 @@
   "dependencies": {
     "@elysiajs/cors": "^1.2.0",
     "@jadwal/db": "workspace:*",
+    "@upstash/redis": "^1.38.4",
     "dotenv": "^16.4.7",
     "elysia": "^1.2.25"
   },
