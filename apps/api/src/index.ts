@@ -1,6 +1,7 @@
 import { Elysia, t } from 'elysia';
 import { cors } from '@elysiajs/cors';
-import { db, jadwalLab, eq, ilike, and, desc, sql } from '@jadwal/db';
+import { db, jadwalLab, eq, ilike, and, or, desc, asc, sql } from '@jadwal/db';
+import { httpLogger, log } from './logger';
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
 const HOST = process.env.HOST || '0.0.0.0';
@@ -13,14 +14,7 @@ export const app = new Elysia()
       credentials: true,
     })
   )
-  .onRequest(({ request }) => {
-    const time = new Date().toLocaleString('id-ID', {
-      timeZone: 'Asia/Jakarta',
-      hour12: false,
-    });
-    const url = new URL(request.url);
-    console.log(`[${time} WIB] ${request.method} ${url.pathname}${url.search}`);
-  })
+  .use(httpLogger)
   .get('/', () => ({
     success: true,
     message: 'Jadwal Kuliah UNAMA API is running',
@@ -34,6 +28,18 @@ export const app = new Elysia()
         async ({ query }) => {
           const conditions = [];
 
+          if (query.search) {
+            const s = `%${query.search.trim()}%`;
+            conditions.push(
+              or(
+                ilike(jadwalLab.mataKuliah, s),
+                ilike(jadwalLab.dosen, s),
+                ilike(jadwalLab.kodeKelas, s),
+                ilike(jadwalLab.ruangan, s)
+              )
+            );
+          }
+
           if (query.hari) {
             conditions.push(eq(jadwalLab.hari, query.hari));
           }
@@ -44,7 +50,7 @@ export const app = new Elysia()
             conditions.push(eq(jadwalLab.kampus, query.kampus));
           }
           if (query.kodeKelas) {
-            conditions.push(eq(jadwalLab.kodeKelas, query.kodeKelas));
+            conditions.push(ilike(jadwalLab.kodeKelas, `%${query.kodeKelas}%`));
           }
           if (query.status) {
             conditions.push(eq(jadwalLab.status, query.status));
@@ -55,8 +61,9 @@ export const app = new Elysia()
           if (query.mataKuliah) {
             conditions.push(ilike(jadwalLab.mataKuliah, `%${query.mataKuliah}%`));
           }
-          if (query.ruangLabor) {
-            conditions.push(ilike(jadwalLab.ruangLabor, `%${query.ruangLabor}%`));
+          const roomFilter = query.ruangan || query.ruangLabor;
+          if (roomFilter) {
+            conditions.push(ilike(jadwalLab.ruangan, `%${roomFilter}%`));
           }
 
           const limit = Math.min(query.limit ?? 50, 200);
@@ -69,7 +76,7 @@ export const app = new Elysia()
               .select()
               .from(jadwalLab)
               .where(whereClause)
-              .orderBy(desc(jadwalLab.id))
+              .orderBy(asc(jadwalLab.waktuMulai), asc(jadwalLab.id))
               .limit(limit)
               .offset(offset),
             db
@@ -93,12 +100,14 @@ export const app = new Elysia()
         },
         {
           query: t.Object({
+            search: t.Optional(t.String()),
             hari: t.Optional(t.String()),
             tanggal: t.Optional(t.String()),
             dosen: t.Optional(t.String()),
             kampus: t.Optional(t.String()),
             kodeKelas: t.Optional(t.String()),
             mataKuliah: t.Optional(t.String()),
+            ruangan: t.Optional(t.String()),
             ruangLabor: t.Optional(t.String()),
             status: t.Optional(t.String()),
             limit: t.Optional(t.Numeric({ default: 50, minimum: 1, maximum: 200 })),
@@ -106,28 +115,73 @@ export const app = new Elysia()
           }),
         }
       )
-      .get('/jadwal/summary', async () => {
-        const [totalCount, campuses, rooms] = await Promise.all([
-          db.select({ count: sql<number>`count(*)::int` }).from(jadwalLab),
-          db
-            .selectDistinct({ kampus: jadwalLab.kampus })
-            .from(jadwalLab)
-            .where(sql`${jadwalLab.kampus} IS NOT NULL AND ${jadwalLab.kampus} != ''`),
-          db
-            .selectDistinct({ ruangLabor: jadwalLab.ruangLabor })
-            .from(jadwalLab)
-            .where(sql`${jadwalLab.ruangLabor} IS NOT NULL AND ${jadwalLab.ruangLabor} != ''`),
-        ]);
+      .get(
+        '/jadwal/summary',
+        async ({ query }) => {
+          const tanggalQuery = query.tanggal?.trim();
+          const tanggalFilter = tanggalQuery
+            ? ilike(jadwalLab.tanggal, `%${tanggalQuery}%`)
+            : undefined;
 
-        return {
-          success: true,
-          data: {
-            totalJadwal: totalCount[0]?.count ?? 0,
-            kampusList: campuses.map((c) => c.kampus),
-            ruangLaborList: rooms.map((r) => r.ruangLabor),
-          },
-        };
-      })
+          const [totalCount, campuses, rooms, statusCounts] = await Promise.all([
+            db
+              .select({ count: sql<number>`count(*)::int` })
+              .from(jadwalLab)
+              .where(tanggalFilter),
+            db
+              .selectDistinct({ kampus: jadwalLab.kampus })
+              .from(jadwalLab)
+              .where(sql`${jadwalLab.kampus} IS NOT NULL AND ${jadwalLab.kampus} != ''`),
+            db
+              .selectDistinct({ ruangan: jadwalLab.ruangan })
+              .from(jadwalLab)
+              .where(sql`${jadwalLab.ruangan} IS NOT NULL AND ${jadwalLab.ruangan} != ''`),
+            db
+              .select({
+                status: jadwalLab.status,
+                count: sql<number>`count(*)::int`,
+              })
+              .from(jadwalLab)
+              .where(tanggalFilter)
+              .groupBy(jadwalLab.status),
+          ]);
+
+          const roomNames = rooms.map((r) => r.ruangan);
+
+          let totalTatapMuka = 0;
+          let totalOnline = 0;
+          let totalCancel = 0;
+
+          for (const item of statusCounts) {
+            const s = item.status?.toLowerCase() || '';
+            if (s.includes('tm') || s.includes('tatap muka')) {
+              totalTatapMuka += item.count;
+            } else if (s.includes('ol') || s.includes('online')) {
+              totalOnline += item.count;
+            } else if (s.includes('cancel') || s.includes('batal')) {
+              totalCancel += item.count;
+            }
+          }
+
+          return {
+            success: true,
+            data: {
+              totalJadwal: totalCount[0]?.count ?? 0,
+              totalTatapMuka,
+              totalOnline,
+              totalCancel,
+              kampusList: campuses.map((c) => c.kampus),
+              ruanganList: roomNames,
+              ruangLaborList: roomNames,
+            },
+          };
+        },
+        {
+          query: t.Object({
+            tanggal: t.Optional(t.String()),
+          }),
+        }
+      )
       .get(
         '/jadwal/:id',
         async ({ params: { id }, set }) => {
@@ -162,6 +216,6 @@ export const app = new Elysia()
     hostname: HOST,
   });
 
-console.log(`🚀 ElysiaJS server is running at http://${app.server?.hostname}:${app.server?.port}`);
+log.success(`🚀 ElysiaJS server is running at http://${app.server?.hostname}:${app.server?.port}`);
 
 export type App = typeof app;
