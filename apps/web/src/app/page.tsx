@@ -11,7 +11,14 @@ import { PaginationControls } from "@/components/dashboard/pagination-controls";
 import { AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { fetchJadwalList, fetchJadwalSummary } from "@/lib/api";
-import { JadwalFilters, JadwalItem, JadwalSummaryData, PaginationMeta, formatDateDb } from "@/lib/types";
+import {
+  JadwalFilters,
+  JadwalItem,
+  JadwalSummaryData,
+  JadwalSummaryFilters,
+  PaginationMeta,
+  formatDateDb,
+} from "@/lib/types";
 
 export default function HomePage() {
   const [summary, setSummary] = React.useState<JadwalSummaryData>({
@@ -49,11 +56,12 @@ export default function HomePage() {
   const [viewMode, setViewMode] = React.useState<"grid" | "table">("grid");
   const [selectedItem, setSelectedItem] = React.useState<JadwalItem | null>(null);
 
-  // Muat ringkasan data saat pertama kali render atau saat filter tanggal berubah
-  const loadSummaryData = React.useCallback(async (tanggal?: string) => {
+  // Muat ringkasan data saat filter berubah (tanggal, kampus, ruangan, pencarian)
+  // Catatan: filter status sengaja dikecualikan agar breakdown di StatsOverview tetap akurat
+  const loadSummaryData = React.useCallback(async (summaryFilters?: JadwalSummaryFilters) => {
     setIsSummaryLoading(true);
     try {
-      const res = await fetchJadwalSummary(tanggal);
+      const res = await fetchJadwalSummary(summaryFilters);
       if (res.success && res.data) {
         setSummary((prev) => ({
           ...res.data,
@@ -89,32 +97,37 @@ export default function HomePage() {
   }, []);
 
   React.useEffect(() => {
-    loadSummaryData(filters.tanggal);
-  }, [filters.tanggal, loadSummaryData]);
+    loadSummaryData({
+      tanggal: filters.tanggal,
+      kampus: filters.kampus,
+      ruangan: filters.ruangan,
+      search: filters.search,
+    });
+  }, [filters.tanggal, filters.kampus, filters.ruangan, filters.search, loadSummaryData]);
 
   React.useEffect(() => {
     loadJadwalData(filters);
   }, [filters, loadJadwalData]);
 
-  const handleFilterChange = (newFilters: Partial<JadwalFilters>) => {
+  const handleFilterChange = React.useCallback((newFilters: Partial<JadwalFilters>) => {
     setFilters((prev) => ({
       ...prev,
       ...newFilters,
       // Reset ke halaman 1 setiap ada perubahan kriteria pencarian/filter
       page: newFilters.page !== undefined ? newFilters.page : 1,
     }));
-  };
+  }, []);
 
-  const handleDateChange = (date: Date | null) => {
+  const handleDateChange = React.useCallback((date: Date | null) => {
     setSelectedDate(date);
     setFilters((prev) => ({
       ...prev,
       tanggal: date ? formatDateDb(date) : undefined,
       page: 1,
     }));
-  };
+  }, []);
 
-  const handleResetFilters = () => {
+  const handleResetFilters = React.useCallback(() => {
     setSelectedDate(null);
     setFilters({
       search: "",
@@ -124,13 +137,21 @@ export default function HomePage() {
       ruangan: "Semua",
       status: "Semua",
       page: 1,
-      limit: filters.limit || 24,
+      limit: 24,
     });
-  };
+  }, []);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    await Promise.all([loadSummaryData(filters.tanggal), loadJadwalData(filters)]);
+    await Promise.all([
+      loadSummaryData({
+        tanggal: filters.tanggal,
+        kampus: filters.kampus,
+        ruangan: filters.ruangan,
+        search: filters.search,
+      }),
+      loadJadwalData(filters),
+    ]);
     setIsRefreshing(false);
   };
 
@@ -157,7 +178,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Real Statistics Overview (Menyesuaikan dengan Tanggal Terpilih) */}
+        {/* Real Statistics Overview (Menyesuaikan dengan Filter Kampus, Ruangan, Tanggal, & Pencarian) */}
         <section aria-label="Ringkasan Statistik Jadwal">
           <StatsOverview
             totalJadwal={summary.totalJadwal}
@@ -167,6 +188,8 @@ export default function HomePage() {
             totalKampus={summary.kampusList.length || 2}
             totalRuangan={summary.ruanganList.length || 11}
             selectedDate={selectedDate}
+            selectedKampus={filters.kampus}
+            selectedRuangan={filters.ruangan}
             isLoading={isSummaryLoading}
           />
         </section>

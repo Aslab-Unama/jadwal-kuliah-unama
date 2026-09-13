@@ -44,6 +44,14 @@ export interface JadwalSummaryResponse {
   data: JadwalSummaryData;
 }
 
+export interface JadwalSummaryFilters {
+  search?: string;
+  hari?: string;
+  tanggal?: string;
+  kampus?: string;
+  ruangan?: string;
+}
+
 export interface JadwalFilters {
   search?: string;
   hari?: string;

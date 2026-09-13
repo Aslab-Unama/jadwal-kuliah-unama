@@ -13,6 +13,8 @@ interface StatsOverviewProps {
   totalKampus?: number;
   totalRuangan?: number;
   selectedDate?: Date | null;
+  selectedKampus?: string;
+  selectedRuangan?: string;
   isLoading?: boolean;
 }
 
@@ -22,6 +24,8 @@ export function StatsOverview({
   totalOnline = 0,
   totalTatapMuka = 0,
   selectedDate,
+  selectedKampus,
+  selectedRuangan,
   isLoading,
 }: StatsOverviewProps) {
   const isDateActive = Boolean(selectedDate);
@@ -29,12 +33,19 @@ export function StatsOverview({
     ? format(selectedDate, "dd MMM yyyy", { locale: localeId })
     : null;
 
+  let filterContext = "";
+  if (selectedRuangan && selectedRuangan !== "Semua") {
+    filterContext = ` di ${selectedRuangan}`;
+  } else if (selectedKampus && selectedKampus !== "Semua") {
+    filterContext = ` di ${selectedKampus}`;
+  }
+
   const stats = [
     {
       title: "Total Sesi Jadwal",
       count: isLoading ? "..." : totalJadwal.toLocaleString("id-ID"),
       suffix: "Sesi",
-      desc: isDateActive ? `Sesi perkuliahan pada ${formattedDate}` : "Jadwal kelas aktif semester ini",
+      desc: isDateActive ? `Sesi perkuliahan pada ${formattedDate}${filterContext}` : `Jadwal kelas aktif semester ini${filterContext}`,
       icon: CalendarCheck,
       iconClass: "bg-muted text-foreground/80 border-border/60 dark:border-transparent dark:text-muted-foreground",
       titleClass: "text-foreground",
@@ -44,7 +55,7 @@ export function StatsOverview({
       title: "Cancel",
       count: isLoading ? "..." : totalCancel.toLocaleString("id-ID"),
       suffix: "Sesi",
-      desc: isDateActive ? `Dibatalkan pada ${formattedDate}` : "Sesi perkuliahan dibatalkan",
+      desc: isDateActive ? `Dibatalkan pada ${formattedDate}${filterContext}` : `Sesi perkuliahan dibatalkan${filterContext}`,
       icon: CalendarX,
       iconClass: "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20",
       titleClass: "text-red-600 dark:text-red-400",
@@ -54,7 +65,7 @@ export function StatsOverview({
       title: "Online",
       count: isLoading ? "..." : totalOnline.toLocaleString("id-ID"),
       suffix: "Sesi",
-      desc: isDateActive ? `Daring (OL) pada ${formattedDate}` : "Sesi perkuliahan daring (OL)",
+      desc: isDateActive ? `Daring (OL) pada ${formattedDate}${filterContext}` : `Sesi perkuliahan daring (OL)${filterContext}`,
       icon: Laptop,
       iconClass: "bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20",
       titleClass: "text-sky-600 dark:text-sky-400",
@@ -64,7 +75,7 @@ export function StatsOverview({
       title: "Tatap Muka",
       count: isLoading ? "..." : totalTatapMuka.toLocaleString("id-ID"),
       suffix: "Sesi",
-      desc: isDateActive ? `Tatap muka (TM) pada ${formattedDate}` : "Sesi tatap muka di kampus (TM)",
+      desc: isDateActive ? `Tatap muka (TM) pada ${formattedDate}${filterContext}` : `Sesi tatap muka di kampus (TM)${filterContext}`,
       icon: Users,
       iconClass: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
       titleClass: "text-emerald-600 dark:text-emerald-400",

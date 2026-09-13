@@ -1,4 +1,4 @@
-import { JadwalApiResponse, JadwalFilters, JadwalItem, JadwalSummaryData, JadwalSummaryResponse } from "./types";
+import { JadwalApiResponse, JadwalFilters, JadwalItem, JadwalSummaryData, JadwalSummaryFilters, JadwalSummaryResponse } from "./types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -170,14 +170,31 @@ const FALLBACK_ITEMS: JadwalItem[] = [
   },
 ];
 
-export async function fetchJadwalSummary(tanggal?: string): Promise<JadwalSummaryResponse> {
+export async function fetchJadwalSummary(
+  filterOrTanggal?: string | JadwalSummaryFilters
+): Promise<JadwalSummaryResponse> {
+  const filters: JadwalSummaryFilters =
+    typeof filterOrTanggal === "string" ? { tanggal: filterOrTanggal } : filterOrTanggal || {};
+
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 3500);
 
     const url = new URL(`${API_BASE_URL}/api/jadwal/summary`);
-    if (tanggal && tanggal.trim() !== "") {
-      url.searchParams.set("tanggal", tanggal.trim());
+    if (filters.tanggal && filters.tanggal.trim() !== "" && filters.tanggal !== "Semua") {
+      url.searchParams.set("tanggal", filters.tanggal.trim());
+    }
+    if (filters.kampus && filters.kampus !== "Semua") {
+      url.searchParams.set("kampus", filters.kampus);
+    }
+    if (filters.ruangan && filters.ruangan !== "Semua") {
+      url.searchParams.set("ruangan", filters.ruangan);
+    }
+    if (filters.search && filters.search.trim() !== "") {
+      url.searchParams.set("search", filters.search.trim());
+    }
+    if (filters.hari && filters.hari !== "Semua") {
+      url.searchParams.set("hari", filters.hari);
     }
 
     const response = await fetch(url.toString(), {
@@ -195,9 +212,56 @@ export async function fetchJadwalSummary(tanggal?: string): Promise<JadwalSummar
     return json;
   } catch {
     // Graceful fallback jika server API lokal belum berjalan
+    let filtered = [...FALLBACK_ITEMS];
+
+    if (filters.tanggal && filters.tanggal !== "Semua") {
+      filtered = filtered.filter((i) => i.tanggal === filters.tanggal);
+    }
+    if (filters.hari && filters.hari !== "Semua") {
+      filtered = filtered.filter((i) => i.hari?.toLowerCase() === filters.hari?.toLowerCase());
+    }
+    if (filters.kampus && filters.kampus !== "Semua") {
+      filtered = filtered.filter((i) => i.kampus === filters.kampus);
+    }
+    if (filters.ruangan && filters.ruangan !== "Semua") {
+      filtered = filtered.filter((i) => i.ruangan === filters.ruangan);
+    }
+    if (filters.search) {
+      const q = filters.search.toLowerCase();
+      filtered = filtered.filter(
+        (i) =>
+          (i.mataKuliah?.toLowerCase().includes(q) ?? false) ||
+          (i.dosen?.toLowerCase().includes(q) ?? false) ||
+          (i.kodeKelas?.toLowerCase().includes(q) ?? false) ||
+          (i.ruangan?.toLowerCase().includes(q) ?? false)
+      );
+    }
+
+    let totalTatapMuka = 0;
+    let totalOnline = 0;
+    let totalCancel = 0;
+
+    for (const item of filtered) {
+      const s = item.status?.toLowerCase() || "";
+      if (s.includes("tm") || s.includes("tatap muka")) {
+        totalTatapMuka++;
+      } else if (s.includes("ol") || s.includes("online")) {
+        totalOnline++;
+      } else if (s.includes("cancel") || s.includes("batal")) {
+        totalCancel++;
+      }
+    }
+
     return {
       success: true,
-      data: FALLBACK_SUMMARY,
+      data: {
+        totalJadwal: filtered.length,
+        totalTatapMuka,
+        totalOnline,
+        totalCancel,
+        kampusList: FALLBACK_SUMMARY.kampusList,
+        ruanganList: FALLBACK_SUMMARY.ruanganList,
+      },
     };
   }
 }

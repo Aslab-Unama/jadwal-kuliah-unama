@@ -118,16 +118,44 @@ export const app = new Elysia()
       .get(
         '/jadwal/summary',
         async ({ query }) => {
-          const tanggalQuery = query.tanggal?.trim();
-          const tanggalFilter = tanggalQuery
-            ? ilike(jadwalLab.tanggal, `%${tanggalQuery}%`)
-            : undefined;
+          const conditions = [];
+
+          if (query.search && query.search.trim() !== '') {
+            const s = `%${query.search.trim()}%`;
+            conditions.push(
+              or(
+                ilike(jadwalLab.mataKuliah, s),
+                ilike(jadwalLab.dosen, s),
+                ilike(jadwalLab.kodeKelas, s),
+                ilike(jadwalLab.ruangan, s)
+              )
+            );
+          }
+
+          if (query.hari && query.hari !== 'Semua') {
+            conditions.push(eq(jadwalLab.hari, query.hari));
+          }
+
+          if (query.tanggal && query.tanggal !== 'Semua' && query.tanggal.trim() !== '') {
+            conditions.push(ilike(jadwalLab.tanggal, `%${query.tanggal.trim()}%`));
+          }
+
+          if (query.kampus && query.kampus !== 'Semua') {
+            conditions.push(eq(jadwalLab.kampus, query.kampus));
+          }
+
+          const roomFilter = query.ruangan || query.ruangLabor;
+          if (roomFilter && roomFilter !== 'Semua') {
+            conditions.push(ilike(jadwalLab.ruangan, `%${roomFilter}%`));
+          }
+
+          const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
           const [totalCount, campuses, rooms, statusCounts] = await Promise.all([
             db
               .select({ count: sql<number>`count(*)::int` })
               .from(jadwalLab)
-              .where(tanggalFilter),
+              .where(whereClause),
             db
               .selectDistinct({ kampus: jadwalLab.kampus })
               .from(jadwalLab)
@@ -142,7 +170,7 @@ export const app = new Elysia()
                 count: sql<number>`count(*)::int`,
               })
               .from(jadwalLab)
-              .where(tanggalFilter)
+              .where(whereClause)
               .groupBy(jadwalLab.status),
           ]);
 
@@ -179,6 +207,11 @@ export const app = new Elysia()
         {
           query: t.Object({
             tanggal: t.Optional(t.String()),
+            hari: t.Optional(t.String()),
+            kampus: t.Optional(t.String()),
+            ruangan: t.Optional(t.String()),
+            ruangLabor: t.Optional(t.String()),
+            search: t.Optional(t.String()),
           }),
         }
       )
