@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Inter } from "next/font/google";
 import { cn } from "@/lib/utils";
+import { ThemeProvider } from "@/components/theme-provider";
 
-const inter = Inter({subsets:['latin'],variable:'--font-sans'});
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
   title: "Jadwal Kuliah UNAMA - Portal Jadwal Kelas & Laboratorium",
@@ -19,9 +20,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="id" className={cn("font-sans antialiased", "font-sans", inter.variable)} suppressHydrationWarning>
+    <html lang="id" className={cn("font-sans antialiased", inter.variable)} suppressHydrationWarning>
       <body className="min-h-screen bg-background text-foreground selection:bg-primary/20">
-        {children}
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );
