@@ -66,10 +66,30 @@ export const app = new Elysia()
             conditions.push(ilike(jadwalLab.ruangan, `%${roomFilter}%`));
           }
 
+          const isAll = query.all === 'true' || query.all === '1';
+          const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+          if (isAll) {
+            const items = await db
+              .select()
+              .from(jadwalLab)
+              .where(whereClause)
+              .orderBy(asc(jadwalLab.waktuMulai), asc(jadwalLab.id));
+
+            return {
+              success: true,
+              pagination: {
+                total: items.length,
+                limit: items.length,
+                offset: 0,
+                hasMore: false,
+              },
+              data: items,
+            };
+          }
+
           const limit = Math.min(query.limit ?? 50, 500);
           const offset = query.offset ?? 0;
-
-          const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
           const [items, totalResult] = await Promise.all([
             db
@@ -100,6 +120,7 @@ export const app = new Elysia()
         },
         {
           query: t.Object({
+            all: t.Optional(t.String()),
             search: t.Optional(t.String()),
             hari: t.Optional(t.String()),
             tanggal: t.Optional(t.String()),
