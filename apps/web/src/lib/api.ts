@@ -279,8 +279,12 @@ export async function fetchJadwalList(filters: JadwalFilters): Promise<JadwalApi
     const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     const params = new URLSearchParams();
-    params.set("limit", limit.toString());
-    params.set("offset", offset.toString());
+    if (filters.all) {
+      params.set("all", "true");
+    } else {
+      params.set("limit", limit.toString());
+      params.set("offset", offset.toString());
+    }
 
     if (filters.hari && filters.hari !== "Semua") {
       params.set("hari", filters.hari);
@@ -348,15 +352,15 @@ export async function fetchJadwalList(filters: JadwalFilters): Promise<JadwalApi
     filtered.sort((a, b) => a.waktuMulai.localeCompare(b.waktuMulai));
 
     const total = filtered.length;
-    const paginated = filtered.slice(offset, offset + limit);
+    const paginated = filters.all ? filtered : filtered.slice(offset, offset + limit);
 
     return {
       success: true,
       pagination: {
         total,
-        limit,
-        offset,
-        hasMore: offset + paginated.length < total,
+        limit: filters.all ? total : limit,
+        offset: filters.all ? 0 : offset,
+        hasMore: filters.all ? false : offset + paginated.length < total,
       },
       data: paginated,
     };

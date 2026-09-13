@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DateSelector } from "./date-selector";
 import { StatusBadge } from "./status-badge";
+import { PaginationControls } from "./pagination-controls";
 import {
   calculateLabGaps,
   getInUseRooms,
@@ -127,10 +128,11 @@ export function AslabRoomMonitor({
     return Array.from(new Set([...UNAMA_LABS, ...fromItems]));
   }, [items]);
 
-  // Hitung seluruh jeda kosong
+  // Hitung seluruh jeda kosong (hanya jika tanggal tertentu dipilih)
   const labGaps = React.useMemo(() => {
+    if (!selectedDate) return [];
     return calculateLabGaps(items, allKnownRooms, selectedKampus);
-  }, [items, allKnownRooms, selectedKampus]);
+  }, [items, allKnownRooms, selectedKampus, selectedDate]);
 
   // Filter daftar ruang terpakai
   const filteredUsedRooms = React.useMemo(() => {
@@ -175,6 +177,38 @@ export function AslabRoomMonitor({
 
   // Hitung jumlah lab yang sedang aktif saat ini
   const activeLabsNowCount = activeNow.filter((r) => r.isLabor).length;
+
+  // Pagination states untuk menjaga performa rendering kartu agar tidak lagging
+  const [labPage, setLabPage] = React.useState<number>(1);
+  const [labLimit, setLabLimit] = React.useState<number>(12);
+
+  const [theoryPage, setTheoryPage] = React.useState<number>(1);
+  const [theoryLimit, setTheoryLimit] = React.useState<number>(12);
+
+  const [gapsPage, setGapsPage] = React.useState<number>(1);
+  const [gapsLimit, setGapsLimit] = React.useState<number>(12);
+
+  // Reset pagination saat filter berubah
+  React.useEffect(() => {
+    setLabPage(1);
+    setTheoryPage(1);
+    setGapsPage(1);
+  }, [selectedKampus, filterType, searchRoom, selectedDate, activeTab]);
+
+  const paginatedLabs = React.useMemo(() => {
+    const offset = (labPage - 1) * labLimit;
+    return usedLabs.slice(offset, offset + labLimit);
+  }, [usedLabs, labPage, labLimit]);
+
+  const paginatedTheoryRooms = React.useMemo(() => {
+    const offset = (theoryPage - 1) * theoryLimit;
+    return usedTheoryRooms.slice(offset, offset + theoryLimit);
+  }, [usedTheoryRooms, theoryPage, theoryLimit]);
+
+  const paginatedGaps = React.useMemo(() => {
+    const offset = (gapsPage - 1) * gapsLimit;
+    return filteredGaps.slice(offset, offset + gapsLimit);
+  }, [filteredGaps, gapsPage, gapsLimit]);
 
   return (
     <section
@@ -353,7 +387,7 @@ export function AslabRoomMonitor({
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {usedLabs.map((room) => {
+                {paginatedLabs.map((room) => {
                   const rawItem = room.rawItem || {
                     id: room.id,
                     hari: "Hari Ini",
@@ -454,6 +488,21 @@ export function AslabRoomMonitor({
                 })}
               </div>
             )}
+
+            {/* Pagination Controls untuk Laboratorium Terpakai */}
+            {usedLabs.length > 0 && (
+              <PaginationControls
+                currentPage={labPage}
+                totalPages={Math.max(1, Math.ceil(usedLabs.length / labLimit))}
+                totalItems={usedLabs.length}
+                limit={labLimit}
+                onPageChange={setLabPage}
+                onLimitChange={(l) => {
+                  setLabLimit(l);
+                  setLabPage(1);
+                }}
+              />
+            )}
           </div>
 
           {/* Section 2: Ruang Kelas Teori (Jika tidak dibatasi ke lab only) */}
@@ -467,7 +516,7 @@ export function AslabRoomMonitor({
               </div>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {usedTheoryRooms.map((room) => {
+                {paginatedTheoryRooms.map((room) => {
                   const rawItem = room.rawItem || {
                     id: room.id,
                     hari: "Hari Ini",
@@ -545,6 +594,21 @@ export function AslabRoomMonitor({
                   );
                 })}
               </div>
+
+              {/* Pagination Controls untuk Ruang Kelas Teori Terpakai */}
+              {usedTheoryRooms.length > 0 && (
+                <PaginationControls
+                  currentPage={theoryPage}
+                  totalPages={Math.max(1, Math.ceil(usedTheoryRooms.length / theoryLimit))}
+                  totalItems={usedTheoryRooms.length}
+                  limit={theoryLimit}
+                  onPageChange={setTheoryPage}
+                  onLimitChange={(l) => {
+                    setTheoryLimit(l);
+                    setTheoryPage(1);
+                  }}
+                />
+              )}
             </div>
           )}
         </div>
@@ -565,13 +629,18 @@ export function AslabRoomMonitor({
             </span>
           </div>
 
-          {filteredGaps.length === 0 ? (
+          {!selectedDate ? (
+            <div className="p-8 text-center border border-dashed border-border text-xs text-muted-foreground">
+              Mode &quot;Semua Tanggal&quot; aktif. Silakan pilih tanggal spesifik pada kalender di atas untuk melihat estimasi jeda waktu ruangan kosong harian.
+            </div>
+          ) : filteredGaps.length === 0 ? (
             <div className="p-8 text-center border border-dashed border-border text-xs text-muted-foreground">
               Tidak ditemukan jeda kosong pada filter yang dipilih.
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {filteredGaps.map((gap) => (
+            <>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {paginatedGaps.map((gap) => (
                 <div
                   key={gap.id}
                   className="group relative flex flex-col justify-between gap-3 border border-border bg-card p-4 text-left shadow-xs transition-all hover:border-emerald-500/60 hover:shadow-sm hover:bg-muted/15"
@@ -831,6 +900,22 @@ export function AslabRoomMonitor({
                 </div>
               ))}
             </div>
+
+            {/* Pagination Controls untuk Jeda Kosong */}
+            {filteredGaps.length > 0 && (
+              <PaginationControls
+                currentPage={gapsPage}
+                totalPages={Math.max(1, Math.ceil(filteredGaps.length / gapsLimit))}
+                totalItems={filteredGaps.length}
+                limit={gapsLimit}
+                onPageChange={setGapsPage}
+                onLimitChange={(l) => {
+                  setGapsLimit(l);
+                  setGapsPage(1);
+                }}
+              />
+            )}
+            </>
           )}
         </div>
       )}

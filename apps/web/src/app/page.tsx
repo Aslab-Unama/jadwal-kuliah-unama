@@ -10,6 +10,8 @@ import { AslabRoomMonitor } from "@/components/dashboard/aslab-room-monitor";
 import { AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
+  useAslabItems,
+  useCurrentDateRawItems,
   useJadwalStore,
   useJadwalSummary,
   usePaginatedJadwal,
@@ -31,19 +33,19 @@ export default function HomePage() {
   const error = useJadwalStore((s) => s.error);
   const isAslab = useJadwalStore((s) => s.isAslab);
   const setIsAslab = useJadwalStore((s) => s.setIsAslab);
-  const fetchScheduleForDate = useJadwalStore((s) => s.fetchScheduleForDate);
+  const fetchAllSchedules = useJadwalStore((s) => s.fetchAllSchedules);
   const refresh = useJadwalStore((s) => s.refresh);
-  const currentRawItems = useJadwalStore((s) => s.currentRawItems);
 
-  // Derived in-memory state hooks (no backend roundtrips on filter/search/pagination)
+  // Derived in-memory state hooks (no backend roundtrips on date/filter/search/pagination)
+  const aslabItems = useAslabItems();
   const summary = useJadwalSummary();
   const { items, totalFiltered, totalPages } = usePaginatedJadwal();
 
-  // Inisialisasi status Aslab dan fetch jadwal pertama kali (didukung date caching)
+  // Inisialisasi status Aslab dan fetch seluruh database ke state sekali di awal
   React.useEffect(() => {
     setIsAslab(localStorage.getItem("aslab_logged_in") === "true");
-    fetchScheduleForDate(selectedDate);
-  }, [fetchScheduleForDate, selectedDate, setIsAslab]);
+    fetchAllSchedules();
+  }, [fetchAllSchedules, setIsAslab]);
 
   const handleRefresh = async () => {
     await refresh();
@@ -89,7 +91,7 @@ export default function HomePage() {
         {/* Panel Monitoring Khusus Aslab (Di atas Jadwal Mahasiswa) */}
         {isAslab && (
           <AslabRoomMonitor
-            items={currentRawItems}
+            items={aslabItems}
             selectedDate={selectedDate}
             onDateChange={setSelectedDate}
             globalKampus={filters.kampus}
