@@ -59,34 +59,27 @@ export function FilterBar({
 }: FilterBarProps) {
   const [isCalendarOpen, setIsCalendarOpen] = React.useState(false);
 
-  // Debounced search state dengan pelindung ref untuk mencegah race condition / revert
+  // Search state dengan pelindung ref user typing agar tidak terjadi race condition saat filter direset
   const [searchValue, setSearchValue] = React.useState(filters.search || "");
   const debouncedSearch = useDebounce(searchValue, 400);
-  const lastEmittedSearchRef = React.useRef(filters.search || "");
+  const isUserTypingRef = React.useRef(false);
 
-  const emitSearchChange = React.useCallback(
-    (value: string) => {
-      if (value !== lastEmittedSearchRef.current) {
-        lastEmittedSearchRef.current = value;
-        onFilterChange({ search: value, page: 1 });
-      }
-    },
-    [onFilterChange]
-  );
-
-  // Sync hanya jika filters.search direset dari luar (misal: tombol reset)
+  // Sync hanya jika filters.search direset/diubah dari luar (misal: tombol reset)
   React.useEffect(() => {
-    const currentExternal = filters.search || "";
-    if (currentExternal !== lastEmittedSearchRef.current) {
-      lastEmittedSearchRef.current = currentExternal;
-      setSearchValue(currentExternal);
+    const externalSearch = filters.search || "";
+    if (externalSearch !== searchValue) {
+      isUserTypingRef.current = false;
+      setSearchValue(externalSearch);
     }
   }, [filters.search]);
 
-  // Eksekusi filter search setelah user berhenti mengetik (debounced)
+  // Eksekusi filter search HANYA jika dipicu oleh ketikan user (debounced 400ms)
   React.useEffect(() => {
-    emitSearchChange(debouncedSearch);
-  }, [debouncedSearch, emitSearchChange]);
+    if (isUserTypingRef.current) {
+      isUserTypingRef.current = false;
+      onFilterChange({ search: debouncedSearch, page: 1 });
+    }
+  }, [debouncedSearch, onFilterChange]);
 
   const isFiltered = Boolean(
     (filters.search && filters.search.trim().length > 0) ||
@@ -96,15 +89,22 @@ export function FilterBar({
       (filters.status && filters.status !== "Semua")
   );
 
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    isUserTypingRef.current = true;
+    setSearchValue(e.target.value);
+  };
+
   const handleClearSearch = () => {
+    isUserTypingRef.current = false;
     setSearchValue("");
-    emitSearchChange("");
+    onFilterChange({ search: "", page: 1 });
   };
 
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      emitSearchChange(searchValue);
+      isUserTypingRef.current = false;
+      onFilterChange({ search: searchValue, page: 1 });
     }
   };
 
@@ -145,7 +145,7 @@ export function FilterBar({
             type="text"
             placeholder="Cari mata kuliah, nama dosen, atau kode kelas..."
             value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
+            onChange={handleSearchChange}
             onKeyDown={handleSearchKeyDown}
             className="h-10 pl-9 pr-9 text-sm"
           />
@@ -295,7 +295,7 @@ export function FilterBar({
 
         <div>
           <label htmlFor="filter-ruangan" className="block text-[11px] font-medium text-muted-foreground mb-1">
-            Ruangan Laboratorium
+            Ruangan
           </label>
           <NativeSelect
             id="filter-ruangan"
