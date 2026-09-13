@@ -1,1 +1,3 @@
-start bun run dev
+@echo off
+start "" bun run dev
+exit
