@@ -8,18 +8,19 @@ import { InMemoryRateLimiter } from './rate-limiter';
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
 const HOST = process.env.HOST || '0.0.0.0';
 
-// Global API Limiter: 100 request per menit per IP (cukup sangat leluasa untuk user normal, memblokir banjir bot/DDoS)
+// Global API Limiter: 30 request per menit per IP (sangat aman untuk backend & kuota Redis)
+// Karena frontend memakai Zustand in-memory store, user normal hanya perlu 1 request di awal.
 const apiRateLimiter = new InMemoryRateLimiter({
   windowMs: 60 * 1000,
-  maxRequests: 100,
-  message: 'Terlalu banyak request. Akses dibatasi demi keamanan server & Redis.',
+  maxRequests: 30,
+  message: 'Too many requests',
 });
 
 // Auth Route Limiter: 10 request per menit per IP (mencegah brute force secret code)
 const authRateLimiter = new InMemoryRateLimiter({
   windowMs: 60 * 1000,
   maxRequests: 10,
-  message: 'Terlalu banyak percobaan login. Coba lagi dalam 1 menit.',
+  message: 'Too many requests',
 });
 
 export const app = new Elysia()
@@ -55,10 +56,10 @@ export const app = new Elysia()
       }
     }
 
-    // Rate limit umum untuk semua route API
+    // Rate limit umum untuk semua route API (30 req / menit)
     if (url.pathname.startsWith('/api/')) {
       const check = apiRateLimiter.check(clientIp);
-      set.headers['X-RateLimit-Limit'] = '100';
+      set.headers['X-RateLimit-Limit'] = '30';
       set.headers['X-RateLimit-Remaining'] = check.remaining.toString();
       set.headers['X-RateLimit-Reset'] = Math.ceil(check.resetMs / 1000).toString();
 
