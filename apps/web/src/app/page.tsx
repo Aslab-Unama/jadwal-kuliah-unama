@@ -3,202 +3,51 @@
 import * as React from "react";
 import { Header } from "@/components/dashboard/header";
 import { StatsOverview } from "@/components/dashboard/stats-overview";
-import { FilterBar } from "@/components/dashboard/filter-bar";
 import { ScheduleGrid } from "@/components/dashboard/schedule-grid";
-import { ScheduleTable } from "@/components/dashboard/schedule-table";
 import { ScheduleDetailDialog } from "@/components/dashboard/schedule-detail-dialog";
 import { PaginationControls } from "@/components/dashboard/pagination-controls";
 import { AslabRoomMonitor } from "@/components/dashboard/aslab-room-monitor";
 import { AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { fetchJadwalList, fetchJadwalSummary } from "@/lib/api";
 import {
-  JadwalFilters,
-  JadwalItem,
-  JadwalSummaryData,
-  JadwalSummaryFilters,
-  PaginationMeta,
-  formatDateDb,
-} from "@/lib/types";
+  useJadwalStore,
+  useJadwalSummary,
+  usePaginatedJadwal,
+} from "@/stores/use-jadwal-store";
 
 export default function HomePage() {
-  const [summary, setSummary] = React.useState<JadwalSummaryData>({
-    totalJadwal: 0,
-    kampusList: [],
-    ruanganList: [],
-  });
-  const [isSummaryLoading, setIsSummaryLoading] = React.useState<boolean>(true);
+  // Zustand Store Selectors
+  const selectedDate = useJadwalStore((s) => s.selectedDate);
+  const setSelectedDate = useJadwalStore((s) => s.setSelectedDate);
+  const filters = useJadwalStore((s) => s.filters);
+  const setFilters = useJadwalStore((s) => s.setFilters);
+  const resetFilters = useJadwalStore((s) => s.resetFilters);
+  const viewMode = useJadwalStore((s) => s.viewMode);
+  const setViewMode = useJadwalStore((s) => s.setViewMode);
+  const selectedItem = useJadwalStore((s) => s.selectedItem);
+  const setSelectedItem = useJadwalStore((s) => s.setSelectedItem);
+  const isLoading = useJadwalStore((s) => s.isLoading);
+  const isRefreshing = useJadwalStore((s) => s.isRefreshing);
+  const error = useJadwalStore((s) => s.error);
+  const isAslab = useJadwalStore((s) => s.isAslab);
+  const setIsAslab = useJadwalStore((s) => s.setIsAslab);
+  const fetchScheduleForDate = useJadwalStore((s) => s.fetchScheduleForDate);
+  const refresh = useJadwalStore((s) => s.refresh);
+  const currentRawItems = useJadwalStore((s) => s.currentRawItems);
 
-  // Tanggal terpilih (Default hari ini)
-  const [selectedDate, setSelectedDate] = React.useState<Date | null>(() => new Date());
+  // Derived in-memory state hooks (no backend roundtrips on filter/search/pagination)
+  const summary = useJadwalSummary();
+  const { items, totalFiltered, totalPages } = usePaginatedJadwal();
 
-  const [items, setItems] = React.useState<JadwalItem[]>([]);
-  const [pagination, setPagination] = React.useState<PaginationMeta>({
-    total: 0,
-    limit: 24,
-    offset: 0,
-    hasMore: false,
-  });
-  const [isLoading, setIsLoading] = React.useState<boolean>(true);
-  const [isRefreshing, setIsRefreshing] = React.useState<boolean>(false);
-  const [error, setError] = React.useState<string | null>(null);
-
-  const [filters, setFilters] = React.useState<JadwalFilters>(() => ({
-    search: "",
-    hari: "Semua",
-    tanggal: formatDateDb(new Date()),
-    kampus: "Semua",
-    ruangan: "Semua",
-    status: "Semua",
-    page: 1,
-    limit: 24,
-  }));
-
-  const [viewMode, setViewMode] = React.useState<"grid" | "table">("grid");
-  const [selectedItem, setSelectedItem] = React.useState<JadwalItem | null>(null);
-
-  // Status sesi Aslab
-  const [isAslab, setIsAslab] = React.useState<boolean>(false);
-  const [allDayItems, setAllDayItems] = React.useState<JadwalItem[]>([]);
-
+  // Inisialisasi status Aslab dan fetch jadwal pertama kali (didukung date caching)
   React.useEffect(() => {
     setIsAslab(localStorage.getItem("aslab_logged_in") === "true");
-  }, []);
-
-  // Muat seluruh jadwal hari terkait untuk analisis lab jika aslab aktif
-  React.useEffect(() => {
-    if (!isAslab) return;
-
-    const loadAllDayData = async () => {
-      try {
-        const res = await fetchJadwalList({
-          tanggal: filters.tanggal,
-          limit: 150,
-        });
-        if (res.success && res.data) {
-          setAllDayItems(res.data);
-        }
-      } catch {
-        // Fallback handled
-      }
-    };
-
-    loadAllDayData();
-  }, [isAslab, filters.tanggal]);
-
-  // Muat ringkasan data saat filter berubah (tanggal, kampus, ruangan, pencarian)
-  // Catatan: filter status sengaja dikecualikan agar breakdown di StatsOverview tetap akurat
-  const loadSummaryData = React.useCallback(async (summaryFilters?: JadwalSummaryFilters) => {
-    setIsSummaryLoading(true);
-    try {
-      const res = await fetchJadwalSummary(summaryFilters);
-      if (res.success && res.data) {
-        setSummary((prev) => ({
-          ...res.data,
-          kampusList: res.data.kampusList?.length ? res.data.kampusList : prev.kampusList,
-          ruanganList: res.data.ruanganList?.length ? res.data.ruanganList : prev.ruanganList,
-        }));
-      }
-    } catch {
-      // Handled in api client
-    } finally {
-      setIsSummaryLoading(false);
-    }
-  }, []);
-
-  // Muat data jadwal berdasarkan filter aktif
-  const loadJadwalData = React.useCallback(async (activeFilters: JadwalFilters) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const res = await fetchJadwalList(activeFilters);
-      if (res.success) {
-        setItems(res.data);
-        setPagination(res.pagination);
-      } else {
-        setError("Gagal memuat jadwal kuliah. Silakan coba kembali.");
-      }
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Terjadi kendala saat memuat data";
-      setError(message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  React.useEffect(() => {
-    loadSummaryData({
-      tanggal: filters.tanggal,
-      kampus: filters.kampus,
-      ruangan: filters.ruangan,
-      search: filters.search,
-    });
-  }, [filters.tanggal, filters.kampus, filters.ruangan, filters.search, loadSummaryData]);
-
-  React.useEffect(() => {
-    loadJadwalData(filters);
-  }, [filters, loadJadwalData]);
-
-  const handleFilterChange = React.useCallback((newFilters: Partial<JadwalFilters>) => {
-    setFilters((prev) => ({
-      ...prev,
-      ...newFilters,
-      // Reset ke halaman 1 setiap ada perubahan kriteria pencarian/filter
-      page: newFilters.page !== undefined ? newFilters.page : 1,
-    }));
-  }, []);
-
-  const handleDateChange = React.useCallback((date: Date | null) => {
-    setSelectedDate(date);
-    setFilters((prev) => ({
-      ...prev,
-      tanggal: date ? formatDateDb(date) : undefined,
-      page: 1,
-    }));
-  }, []);
-
-  const handleResetFilters = React.useCallback(() => {
-    setSelectedDate(null);
-    setFilters({
-      search: "",
-      hari: "Semua",
-      tanggal: undefined,
-      kampus: "Semua",
-      ruangan: "Semua",
-      status: "Semua",
-      page: 1,
-      limit: 24,
-    });
-  }, []);
+    fetchScheduleForDate(selectedDate);
+  }, [fetchScheduleForDate, selectedDate, setIsAslab]);
 
   const handleRefresh = async () => {
-    setIsRefreshing(true);
-    const promises: Promise<unknown>[] = [
-      loadSummaryData({
-        tanggal: filters.tanggal,
-        kampus: filters.kampus,
-        ruangan: filters.ruangan,
-        search: filters.search,
-      }),
-      loadJadwalData(filters),
-    ];
-
-    if (isAslab) {
-      promises.push(
-        fetchJadwalList({
-          tanggal: filters.tanggal,
-          limit: 150,
-        }).then((res) => {
-          if (res.success && res.data) setAllDayItems(res.data);
-        })
-      );
-    }
-
-    await Promise.all(promises);
-    setIsRefreshing(false);
+    await refresh();
   };
-
-  const totalPages = Math.max(1, Math.ceil(pagination.total / (filters.limit || 24)));
 
   return (
     <div className="flex min-h-screen flex-col bg-muted/30 dark:bg-background text-foreground">
@@ -233,31 +82,17 @@ export default function HomePage() {
             selectedDate={selectedDate}
             selectedKampus={filters.kampus}
             selectedRuangan={filters.ruangan}
-            isLoading={isSummaryLoading}
+            isLoading={isLoading}
           />
         </section>
 
-        {/* Multi-Criteria Filter Bar (Dengan Kalender Tanggal dan Tombol Kiri/Kanan) */}
-        <section aria-label="Panel Pencarian dan Penyaringan">
-          <FilterBar
-            filters={filters}
-            onFilterChange={handleFilterChange}
-            onResetFilters={handleResetFilters}
-            kampusList={summary.kampusList}
-            ruanganList={summary.ruanganList}
-            viewMode={viewMode}
-            onViewModeChange={setViewMode}
-            totalFiltered={pagination.total}
-            selectedDate={selectedDate}
-            onDateChange={handleDateChange}
-          />
-        </section>
-
-        {/* Panel Monitoring Khusus Aslab (Setelah FilterBar) */}
+        {/* Panel Monitoring Khusus Aslab (Di atas Jadwal Mahasiswa) */}
         {isAslab && (
           <AslabRoomMonitor
-            items={allDayItems.length > 0 ? allDayItems : items}
+            items={currentRawItems}
             selectedDate={selectedDate}
+            onDateChange={setSelectedDate}
+            globalKampus={filters.kampus}
             onSelectItem={setSelectedItem}
           />
         )}
@@ -283,38 +118,34 @@ export default function HomePage() {
           </section>
         )}
 
-        {/* Schedule Display (Dual View: Grid or Table) */}
-        <section aria-label="Daftar Jadwal Kelas" className="space-y-4">
-          {viewMode === "grid" ? (
-            <ScheduleGrid
-              items={items}
-              isLoading={isLoading}
-              onSelectItem={setSelectedItem}
-              onResetFilters={handleResetFilters}
-              selectedDate={selectedDate}
-            />
-          ) : (
-            <ScheduleTable
-              items={items}
-              isLoading={isLoading}
-              onSelectItem={setSelectedItem}
-              onResetFilters={handleResetFilters}
-              selectedDate={selectedDate}
-            />
-          )}
-
-          {/* Pagination Controls */}
-          {!isLoading && pagination.total > 0 && (
-            <PaginationControls
-              currentPage={filters.page || 1}
-              totalPages={totalPages}
-              totalItems={pagination.total}
-              limit={filters.limit || 24}
-              onPageChange={(page) => handleFilterChange({ page })}
-              onLimitChange={(limit) => handleFilterChange({ limit, page: 1 })}
-            />
-          )}
-        </section>
+        {/* Schedule Display (Terintegrasi dengan FilterBar dan Pagination di dalam ScheduleGrid) */}
+        <ScheduleGrid
+          items={items}
+          isLoading={isLoading}
+          onSelectItem={setSelectedItem}
+          onResetFilters={resetFilters}
+          selectedDate={selectedDate}
+          filters={filters}
+          onFilterChange={setFilters}
+          kampusList={summary.kampusList}
+          ruanganList={summary.ruanganList}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          totalFiltered={totalFiltered}
+          onDateChange={setSelectedDate}
+          pagination={
+            !isLoading && totalFiltered > 0 ? (
+              <PaginationControls
+                currentPage={filters.page || 1}
+                totalPages={totalPages}
+                totalItems={totalFiltered}
+                limit={filters.limit || 24}
+                onPageChange={(page) => setFilters({ page })}
+                onLimitChange={(limit) => setFilters({ limit, page: 1 })}
+              />
+            ) : null
+          }
+        />
       </main>
 
       {/* Modal Detail Dialog */}

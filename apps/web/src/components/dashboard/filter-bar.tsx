@@ -1,31 +1,22 @@
 "use client";
 
 import * as React from "react";
-import { format, addDays, subDays } from "date-fns";
-import { id as localeId } from "date-fns/locale";
+import { cn } from "cn";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import {
-  Calendar as CalendarIcon,
-  ChevronLeft,
-  ChevronRight,
   LayoutGrid,
   RotateCcw,
   Search,
   Table as TableIcon,
   X,
 } from "lucide-react";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { JadwalFilters, formatDateDb } from "@/lib/types";
+import { DateSelector } from "./date-selector";
+import { JadwalFilters } from "@/lib/types";
 import { useDebounce } from "@/hooks/use-debounce";
 
-interface FilterBarProps {
+export interface FilterBarProps {
   filters: JadwalFilters;
   onFilterChange: (newFilters: Partial<JadwalFilters>) => void;
   onResetFilters: () => void;
@@ -36,6 +27,7 @@ interface FilterBarProps {
   totalFiltered: number;
   selectedDate: Date | null;
   onDateChange: (date: Date | null) => void;
+  className?: string;
 }
 
 const STATUS_OPTIONS = [
@@ -56,12 +48,11 @@ export function FilterBar({
   totalFiltered,
   selectedDate,
   onDateChange,
+  className,
 }: FilterBarProps) {
-  const [isCalendarOpen, setIsCalendarOpen] = React.useState(false);
-
   // Search state dengan pelindung ref user typing agar tidak terjadi race condition saat filter direset
   const [searchValue, setSearchValue] = React.useState(filters.search || "");
-  const debouncedSearch = useDebounce(searchValue, 400);
+  const debouncedSearch = useDebounce(searchValue, 150);
   const isUserTypingRef = React.useRef(false);
 
   // Sync hanya jika filters.search direset/diubah dari luar (misal: tombol reset)
@@ -108,35 +99,8 @@ export function FilterBar({
     }
   };
 
-  const handlePrevDay = () => {
-    const cur = selectedDate || new Date();
-    const newDate = subDays(cur, 1);
-    onDateChange(newDate);
-    onFilterChange({ tanggal: formatDateDb(newDate), page: 1 });
-  };
-
-  const handleNextDay = () => {
-    const cur = selectedDate || new Date();
-    const newDate = addDays(cur, 1);
-    onDateChange(newDate);
-    onFilterChange({ tanggal: formatDateDb(newDate), page: 1 });
-  };
-
-  const handleDateSelect = (date: Date | undefined) => {
-    if (date) {
-      onDateChange(date);
-      onFilterChange({ tanggal: formatDateDb(date), page: 1 });
-      setIsCalendarOpen(false);
-    }
-  };
-
-  const handleClearDate = () => {
-    onDateChange(null);
-    onFilterChange({ tanggal: undefined, page: 1 });
-  };
-
   return (
-    <div className="space-y-3 border border-border bg-card p-3 sm:p-4 shadow-xs">
+    <div className={cn("space-y-3 border border-border bg-card p-3 sm:p-4 shadow-xs", className)}>
       {/* Search Bar (Full width with responsive placeholder) */}
       <div className="relative w-full">
         <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -162,92 +126,8 @@ export function FilterBar({
 
       {/* Date Selector (Left) & View Mode Switcher (Right) */}
       <div className="flex flex-wrap items-center justify-between gap-2 py-0.5">
-        {/* Date Selector with Left/Right Buttons */}
-        <div className="flex items-center gap-1 min-w-0">
-          <span className="text-xs font-medium text-muted-foreground mr-0.5 shrink-0">Tanggal:</span>
-
-          {/* Tombol Kiri */}
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            onClick={handlePrevDay}
-            className="size-7 rounded-none shrink-0"
-            title="Hari Sebelumnya"
-            aria-label="Hari Sebelumnya"
-          >
-            <ChevronLeft className="size-3.5" />
-          </Button>
-
-          {/* Tombol Kalender Popover */}
-          <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-            <PopoverTrigger className="inline-flex items-center gap-1.5 h-7 px-2 sm:px-2.5 border border-border bg-background text-foreground text-xs font-medium hover:bg-muted/40 transition-colors cursor-pointer select-none rounded-none shadow-2xs max-w-[150px] sm:max-w-none">
-              <CalendarIcon className="size-3.5 text-primary shrink-0" />
-              <span className="truncate hidden sm:inline">
-                {selectedDate
-                  ? format(selectedDate, "EEEE, dd MMMM yyyy", { locale: localeId })
-                  : "Semua Tanggal"}
-              </span>
-              <span className="truncate sm:hidden">
-                {selectedDate
-                  ? format(selectedDate, "dd MMM yyyy", { locale: localeId })
-                  : "Semua Tanggal"}
-              </span>
-            </PopoverTrigger>
-
-            <PopoverContent
-              align="start"
-              className="w-auto p-2 rounded-none bg-card border-border shadow-xl space-y-1.5"
-            >
-              <Calendar
-                mode="single"
-                selected={selectedDate || undefined}
-                defaultMonth={selectedDate || new Date(2026, 3, 13)}
-                onSelect={handleDateSelect}
-                locale={localeId}
-                className="rounded-none border border-border bg-background p-1"
-              />
-              <div className="flex items-center justify-between border-t border-border pt-1.5 px-0.5">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 px-2 text-[11px] font-medium rounded-none cursor-pointer"
-                  onClick={() => handleDateSelect(new Date())}
-                >
-                  Hari Ini
-                </Button>
-                {selectedDate && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 px-2 text-[11px] text-muted-foreground hover:text-foreground rounded-none cursor-pointer"
-                    onClick={() => {
-                      handleClearDate();
-                      setIsCalendarOpen(false);
-                    }}
-                  >
-                    Semua Tanggal
-                  </Button>
-                )}
-              </div>
-            </PopoverContent>
-          </Popover>
-
-          {/* Tombol Kanan */}
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            onClick={handleNextDay}
-            className="size-7 rounded-none shrink-0"
-            title="Hari Berikutnya"
-            aria-label="Hari Berikutnya"
-          >
-            <ChevronRight className="size-3.5" />
-          </Button>
-        </div>
+        {/* Unified Date Selector */}
+        <DateSelector selectedDate={selectedDate} onDateChange={onDateChange} />
 
         {/* View Toggle (Kartu / Tabel) */}
         <div className="inline-flex border border-border p-0.5 bg-muted/40 shrink-0">

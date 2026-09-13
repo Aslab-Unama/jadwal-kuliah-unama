@@ -2,12 +2,16 @@
 
 import * as React from "react";
 import { cn } from "cn";
+import { format } from "date-fns";
+import { id as localeId } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "./status-badge";
-import { JadwalItem, formatDosenName } from "@/lib/types";
+import { FilterBar } from "./filter-bar";
+import { ScheduleTable } from "./schedule-table";
+import { JadwalFilters, JadwalItem, formatDosenName } from "@/lib/types";
 import {
   Building2,
   Calendar,
@@ -18,13 +22,27 @@ import {
   User,
 } from "lucide-react";
 
-interface ScheduleGridProps {
+export interface ScheduleGridProps {
   items: JadwalItem[];
   isLoading: boolean;
   onSelectItem: (item: JadwalItem) => void;
   onResetFilters?: () => void;
   selectedDate?: Date | null;
   className?: string;
+
+  // FilterBar integrated props
+  filters?: JadwalFilters;
+  onFilterChange?: (newFilters: Partial<JadwalFilters>) => void;
+  kampusList?: string[];
+  ruanganList?: string[];
+  viewMode?: "grid" | "table";
+  onViewModeChange?: (mode: "grid" | "table") => void;
+  totalFiltered?: number;
+  onDateChange?: (date: Date | null) => void;
+
+  // Custom slots
+  filterBar?: React.ReactNode;
+  pagination?: React.ReactNode;
 }
 
 export function ScheduleGrid({
@@ -34,25 +52,89 @@ export function ScheduleGrid({
   onResetFilters,
   selectedDate,
   className,
+  filters,
+  onFilterChange,
+  kampusList,
+  ruanganList,
+  viewMode = "grid",
+  onViewModeChange,
+  totalFiltered,
+  onDateChange,
+  filterBar,
+  pagination,
 }: ScheduleGridProps) {
-  if (isLoading) {
-    return (
-      <section
-        aria-label="Daftar Jadwal Kuliah"
-        className={cn(
-          "relative border border-border bg-card p-4 sm:p-6 shadow-xs space-y-4",
-          className
-        )}
-      >
-        <div className="flex flex-col gap-3 pb-4 border-b border-border/70 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-1.5">
-            <Skeleton className="h-4 w-28" />
-            <Skeleton className="h-6 w-56" />
-            <Skeleton className="h-3.5 w-72" />
+  const renderedFilterBar = filterBar ? (
+    filterBar
+  ) : filters &&
+    onFilterChange &&
+    onResetFilters &&
+    kampusList &&
+    ruanganList &&
+    onViewModeChange &&
+    totalFiltered !== undefined &&
+    onDateChange ? (
+    <FilterBar
+      filters={filters}
+      onFilterChange={onFilterChange}
+      onResetFilters={onResetFilters}
+      kampusList={kampusList}
+      ruanganList={ruanganList}
+      viewMode={viewMode}
+      onViewModeChange={onViewModeChange}
+      totalFiltered={totalFiltered}
+      selectedDate={selectedDate || null}
+      onDateChange={onDateChange}
+      className="border-border/60 bg-muted/15"
+    />
+  ) : null;
+
+  return (
+    <section
+      aria-label="Daftar Jadwal Kuliah"
+      className={cn(
+        "relative border border-border bg-card p-4 sm:p-6 shadow-xs space-y-4",
+        className
+      )}
+    >
+      {/* Header Panel Jadwal Kuliah */}
+      <div className="flex flex-col gap-3 pb-4 border-b border-border/70 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <Badge
+              variant="outline"
+              className="text-[10px] font-semibold tracking-wide uppercase border-border bg-muted/60 text-foreground"
+            >
+              <GraduationCap className="size-3 mr-1 text-primary" />
+              Sesi Perkuliahan
+            </Badge>
+            <span className="text-xs text-muted-foreground font-mono">
+              {totalFiltered !== undefined ? `${totalFiltered} Sesi Terdaftar` : `${items.length} Sesi Terdaftar`}
+            </span>
           </div>
-          <Skeleton className="h-8 w-40" />
+          <h3 className="text-lg font-bold tracking-tight text-foreground sm:text-xl">
+            Jadwal Perkuliahan Mahasiswa
+          </h3>
+          <p className="text-xs text-muted-foreground">
+            Daftar perkuliahan tatap muka dan online sesuai jadwal akademik aktif UNAMA.
+          </p>
         </div>
 
+        {/* Info Tanggal / Status di Sisi Kanan Header */}
+        <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/40 px-3 py-1.5 border border-border/60 self-start sm:self-center font-medium">
+          <Calendar className="size-3.5 text-primary shrink-0" />
+          <span>
+            {selectedDate
+              ? format(selectedDate, "EEEE, dd MMMM yyyy", { locale: localeId })
+              : "Semua Jadwal Perkuliahan"}
+          </span>
+        </div>
+      </div>
+
+      {/* FilterBar Terintegrasi Di Dalam Jadwal Perkuliahan */}
+      {renderedFilterBar}
+
+      {/* Konten Utama Jadwal: Loading, Empty, Table, atau Card Grid */}
+      {isLoading ? (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
             <div
@@ -75,39 +157,7 @@ export function ScheduleGrid({
             </div>
           ))}
         </div>
-      </section>
-    );
-  }
-
-  if (items.length === 0) {
-    return (
-      <section
-        aria-label="Daftar Jadwal Kuliah"
-        className={cn(
-          "relative border border-border bg-card p-4 sm:p-6 shadow-xs space-y-4",
-          className
-        )}
-      >
-        <div className="flex flex-col gap-3 pb-4 border-b border-border/70 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <Badge
-                variant="outline"
-                className="text-[10px] font-semibold tracking-wide uppercase border-border bg-muted/60 text-foreground"
-              >
-                <GraduationCap className="size-3 mr-1 text-primary" />
-                Sesi Perkuliahan
-              </Badge>
-            </div>
-            <h3 className="text-lg font-bold tracking-tight text-foreground sm:text-xl">
-              Jadwal Perkuliahan Mahasiswa
-            </h3>
-            <p className="text-xs text-muted-foreground">
-              Daftar perkuliahan tatap muka dan online sesuai jadwal akademik aktif UNAMA.
-            </p>
-          </div>
-        </div>
-
+      ) : items.length === 0 ? (
         <div className="border border-dashed border-border p-8 bg-muted/10 text-center">
           <Empty className="p-4">
             <EmptyMedia variant="icon">
@@ -133,7 +183,7 @@ export function ScheduleGrid({
                   variant="outline"
                   size="sm"
                   onClick={onResetFilters}
-                  className="h-8 rounded-none text-xs"
+                  className="h-8 rounded-none text-xs cursor-pointer"
                 >
                   Tampilkan Semua Jadwal Semester
                 </Button>
@@ -141,60 +191,17 @@ export function ScheduleGrid({
             </div>
           </Empty>
         </div>
-      </section>
-    );
-  }
-
-  return (
-    <section
-      aria-label="Daftar Jadwal Kuliah"
-      className={cn(
-        "relative border border-border bg-card p-4 sm:p-6 shadow-xs space-y-4",
-        className
-      )}
-    >
-      {/* Header Panel Jadwal Kuliah (Sinkron dengan gaya AslabRoomMonitor) */}
-      <div className="flex flex-col gap-3 pb-4 border-b border-border/70 sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Badge
-              variant="outline"
-              className="text-[10px] font-semibold tracking-wide uppercase border-border bg-muted/60 text-foreground"
-            >
-              <GraduationCap className="size-3 mr-1 text-primary" />
-              Sesi Perkuliahan
-            </Badge>
-            <span className="text-xs text-muted-foreground font-mono">
-              {items.length} Sesi Terdaftar
-            </span>
-          </div>
-          <h3 className="text-lg font-bold tracking-tight text-foreground sm:text-xl">
-            Jadwal Perkuliahan Mahasiswa
-          </h3>
-          <p className="text-xs text-muted-foreground">
-            Daftar perkuliahan tatap muka dan online sesuai jadwal akademik aktif UNAMA.
-          </p>
-        </div>
-
-        {/* Info Tanggal / Status di Sisi Kanan Header */}
-        <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/40 px-3 py-1.5 border border-border/60 self-start sm:self-center font-medium">
-          <Calendar className="size-3.5 text-primary shrink-0" />
-          <span>
-            {selectedDate
-              ? selectedDate.toLocaleDateString("id-ID", {
-                  weekday: "long",
-                  day: "numeric",
-                  month: "long",
-                  year: "numeric",
-                })
-              : "Semua Jadwal Perkuliahan"}
-          </span>
-        </div>
-      </div>
-
-      {/* Grid Kartu Jadwal */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {items.map((item) => (
+      ) : viewMode === "table" ? (
+        <ScheduleTable
+          items={items}
+          isLoading={false}
+          onSelectItem={onSelectItem}
+          onResetFilters={onResetFilters}
+          selectedDate={selectedDate}
+        />
+      ) : (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {items.map((item) => (
           <div
             key={item.id}
             role="button"
@@ -259,6 +266,10 @@ export function ScheduleGrid({
           </div>
         ))}
       </div>
+      )}
+
+      {/* Slot Kontrol Paginasi */}
+      {pagination}
     </section>
   );
 }

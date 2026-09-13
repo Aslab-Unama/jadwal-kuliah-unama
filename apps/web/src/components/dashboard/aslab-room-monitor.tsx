@@ -3,12 +3,12 @@
 import * as React from "react";
 import { cn } from "cn";
 import {
+  Calendar,
   Clock,
   DoorOpen,
   DoorClosed,
   Building2,
   User,
-  Calendar,
   Info,
   Timer,
   Radio,
@@ -16,12 +16,13 @@ import {
   Search,
   CheckCircle2,
   ShieldCheck,
-  ExternalLink,
+  X,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateSelector } from "./date-selector";
 import { StatusBadge } from "./status-badge";
 import {
   calculateLabGaps,
@@ -31,9 +32,47 @@ import {
 } from "@/lib/lab-utils";
 import { JadwalItem, formatDosenName } from "@/lib/types";
 
+/**
+ * Penanda status perkuliahan di akhir link (teks warna simpel tanpa border/box):
+ * - (TM) Hijau: Tatap Muka
+ * - (OL) Biru: Online / Daring
+ * - (CL) Merah: Cancel / Batal
+ */
+function ClassStatusTag({ status }: { status?: string }) {
+  if (!status) return null;
+  const s = status.toLowerCase();
+
+  // (CL) Merah - Cancel / Batal
+  if (s.includes("cancel") || s.includes("batal") || s.includes("(cl)")) {
+    return (
+      <span className="text-red-600 dark:text-red-400 font-semibold ml-1 shrink-0">
+        (CL)
+      </span>
+    );
+  }
+
+  // (OL) Biru - Online / Daring
+  if (s.includes("(ol)") || s.includes("online") || s.includes("daring")) {
+    return (
+      <span className="text-blue-600 dark:text-blue-400 font-semibold ml-1 shrink-0">
+        (OL)
+      </span>
+    );
+  }
+
+  // (TM) Hijau - Tatap Muka
+  return (
+    <span className="text-emerald-600 dark:text-emerald-400 font-semibold ml-1 shrink-0">
+      (TM)
+    </span>
+  );
+}
+
 interface AslabRoomMonitorProps {
   items: JadwalItem[];
   selectedDate?: Date | null;
+  onDateChange?: (date: Date | null) => void;
+  globalKampus?: string;
   onSelectItem?: (item: JadwalItem) => void;
   className?: string;
 }
@@ -41,15 +80,24 @@ interface AslabRoomMonitorProps {
 export function AslabRoomMonitor({
   items,
   selectedDate,
+  onDateChange,
+  globalKampus,
   onSelectItem,
   className,
 }: AslabRoomMonitorProps) {
   // Mode tampilan: "terpakai" (In-Use Cards) vs "jeda_kosong" (Empty Gaps)
   const [activeTab, setActiveTab] = React.useState<"terpakai" | "jeda_kosong">("terpakai");
-  const [selectedKampus, setSelectedKampus] = React.useState<string>("Semua");
+  const [selectedKampus, setSelectedKampus] = React.useState<string>(globalKampus || "Semua");
   const [filterType, setFilterType] = React.useState<"all" | "lab_only">("lab_only");
   const [searchRoom, setSearchRoom] = React.useState<string>("");
   const [currentTimeWib, setCurrentTimeWib] = React.useState<string>("");
+
+  // Sinkronisasi filter kampus jika filter utama di FilterBar berubah
+  React.useEffect(() => {
+    if (globalKampus && (globalKampus === "Semua" || globalKampus === "Kampus Thehok" || globalKampus === "Kampus Kobar")) {
+      setSelectedKampus(globalKampus);
+    }
+  }, [globalKampus]);
 
   // Update jam real-time setiap 30 detik
   React.useEffect(() => {
@@ -172,18 +220,30 @@ export function AslabRoomMonitor({
             variant={activeTab === "jeda_kosong" ? "default" : "outline"}
             size="sm"
             onClick={() => setActiveTab("jeda_kosong")}
-            className="h-8 gap-1.5 cursor-pointer text-xs rounded-none border-emerald-500/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/10 justify-center"
+            className={cn(
+              "h-8 gap-1.5 cursor-pointer text-xs rounded-none justify-center transition-colors font-semibold",
+              activeTab === "jeda_kosong"
+                ? "bg-primary text-black hover:bg-primary/90 border-transparent"
+                : "border-emerald-500/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/10"
+            )}
           >
-            <Timer className="size-3.5 text-emerald-500" />
-            <span className="font-semibold">Cek Jeda & Ruang Kosong ({filteredGaps.length})</span>
+            <Timer className={cn("size-3.5", activeTab === "jeda_kosong" ? "text-black" : "text-emerald-500")} />
+            <span>Cek Jeda & Ruang Kosong ({filteredGaps.length})</span>
           </Button>
         </div>
       </div>
 
-      {/* Sub-Filters: Kampus, Tipe Ruang, Pencarian */}
+      {/* Sub-Filters: Tanggal Picker, Kampus, Tipe Ruang, Pencarian */}
       <div className="flex flex-col gap-2.5 py-3 sm:flex-row sm:items-center sm:justify-between border-b border-border/50 text-xs">
         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-          <span className="text-muted-foreground text-[11px] font-medium mr-0.5">Filter:</span>
+          {/* Kontrol Kalender & Navigasi Hari Identik dengan FilterBar */}
+          {onDateChange && (
+            <DateSelector selectedDate={selectedDate || null} onDateChange={onDateChange} />
+          )}
+
+          <div className="h-4 w-px bg-border mx-0.5 hidden sm:block" />
+
+          {/* Filter Kampus */}
           {["Semua", "Kampus Thehok", "Kampus Kobar"].map((kp) => (
             <button
               key={kp}
@@ -200,8 +260,9 @@ export function AslabRoomMonitor({
             </button>
           ))}
 
-          <div className="h-4 w-px bg-border mx-1 hidden sm:block" />
+          <div className="h-4 w-px bg-border mx-0.5 hidden sm:block" />
 
+          {/* Toggle Khusus Lab vs Semua Ruangan */}
           <button
             type="button"
             onClick={() => setFilterType(filterType === "lab_only" ? "all" : "lab_only")}
@@ -217,15 +278,26 @@ export function AslabRoomMonitor({
           </button>
         </div>
 
-        {/* Input Pencarian Ruangan */}
+        {/* Input Pencarian Ruangan dengan tombol reset */}
         <div className="relative w-full sm:w-56">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3 text-muted-foreground" />
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3 text-muted-foreground pointer-events-none" />
           <Input
             value={searchRoom}
             onChange={(e) => setSearchRoom(e.target.value)}
             placeholder="Cari ruang / matkul..."
-            className="pl-7 h-8 sm:h-7 text-xs rounded-none"
+            className="pl-7 pr-7 h-8 sm:h-7 text-xs rounded-none"
           />
+          {searchRoom && (
+            <button
+              type="button"
+              onClick={() => setSearchRoom("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+              title="Hapus pencarian"
+              aria-label="Hapus pencarian"
+            >
+              <X className="size-3" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -529,8 +601,41 @@ export function AslabRoomMonitor({
                     <div className="text-xs text-muted-foreground space-y-0.5 min-h-[36px]">
                       {gap.tipeJeda === "seharian_kosong" ? (
                         <>
-                          <div className="truncate">Kosong seharian</div>
-                          <div className="truncate text-foreground/80">Lab tutup {gap.waktuSelesai} WIB</div>
+                          <div className="line-clamp-2 leading-relaxed">
+                            {gap.onlineClasses && gap.onlineClasses.length > 0 ? (
+                              <span>
+                                <span className="text-muted-foreground">Sesi daring: </span>
+                                {gap.onlineClasses.map((c, idx) => (
+                                  <React.Fragment key={idx}>
+                                    {idx > 0 && <span className="text-muted-foreground mr-1">,</span>}
+                                    {c.rawItem && onSelectItem ? (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          onSelectItem(c.rawItem!);
+                                        }}
+                                        className="hover:underline cursor-pointer font-medium text-foreground group-hover:text-primary transition-colors inline"
+                                        title={`Buka detail kelas: ${c.mataKuliah} (${c.dosen})`}
+                                      >
+                                        {c.mataKuliah}
+                                      </button>
+                                    ) : (
+                                      <span className="font-medium text-foreground">{c.mataKuliah}</span>
+                                    )}
+                                    <ClassStatusTag status={c.status || c.rawItem?.status} />
+                                  </React.Fragment>
+                                ))}
+                              </span>
+                            ) : (
+                              <span>Kosong seharian</span>
+                            )}
+                          </div>
+                          <div className="truncate text-foreground/80">
+                            {gap.onlineClasses && gap.onlineClasses.length > 0
+                              ? `Lab kosong fisik seharian (Tutup ${gap.waktuSelesai} WIB)`
+                              : `Lab tutup ${gap.waktuSelesai} WIB`}
+                          </div>
                         </>
                       ) : gap.tipeJeda === "antar_kelas" ? (
                         <>
@@ -542,17 +647,20 @@ export function AslabRoomMonitor({
                                   e.stopPropagation();
                                   onSelectItem(gap.sebelumKelas!.rawItem!);
                                 }}
-                                className="group/btn inline-flex items-center gap-1 text-left hover:text-emerald-600 dark:hover:text-emerald-400 hover:underline cursor-pointer transition-colors max-w-full"
+                                className="group/btn inline text-left hover:underline cursor-pointer transition-colors max-w-full"
                                 title={`Buka detail kelas: ${gap.sebelumKelas.mataKuliah} (${gap.sebelumKelas.dosen})`}
                               >
-                                <span className="truncate">
-                                  Setelah <strong className="font-medium text-foreground/90 group-hover/btn:text-emerald-600 dark:group-hover/btn:text-emerald-400">{gap.sebelumKelas.mataKuliah}</strong>
-                                </span>
-                                <ExternalLink className="size-2.5 shrink-0 opacity-60 group-hover/btn:opacity-100" />
+                                <span>Setelah </span>
+                                <strong className="font-medium text-foreground group-hover/btn:text-primary">
+                                  {gap.sebelumKelas.mataKuliah}
+                                </strong>
+                                <ClassStatusTag status={gap.sebelumKelas.status || gap.sebelumKelas.rawItem?.status} />
                               </button>
                             ) : (
                               <span title={`Setelah ${gap.sebelumKelas?.mataKuliah}`}>
-                                Setelah {gap.sebelumKelas?.mataKuliah}
+                                <span>Setelah </span>
+                                <span className="font-medium text-foreground">{gap.sebelumKelas?.mataKuliah}</span>
+                                <ClassStatusTag status={gap.sebelumKelas?.status || gap.sebelumKelas?.rawItem?.status} />
                               </span>
                             )}
                           </div>
@@ -564,24 +672,56 @@ export function AslabRoomMonitor({
                                   e.stopPropagation();
                                   onSelectItem(gap.setelahKelas!.rawItem!);
                                 }}
-                                className="group/btn inline-flex items-center gap-1 text-left hover:text-emerald-600 dark:hover:text-emerald-400 hover:underline cursor-pointer transition-colors max-w-full"
+                                className="group/btn inline text-left hover:underline cursor-pointer transition-colors max-w-full"
                                 title={`Buka detail kelas: ${gap.setelahKelas.mataKuliah} (${gap.setelahKelas.dosen})`}
                               >
-                                <span className="truncate">
-                                  Sebelum <strong className="font-medium text-foreground/90 group-hover/btn:text-emerald-600 dark:group-hover/btn:text-emerald-400">{gap.setelahKelas.mataKuliah}</strong>
-                                </span>
-                                <ExternalLink className="size-2.5 shrink-0 opacity-60 group-hover/btn:opacity-100" />
+                                <span>Sebelum </span>
+                                <strong className="font-medium text-foreground group-hover/btn:text-primary">
+                                  {gap.setelahKelas.mataKuliah}
+                                </strong>
+                                <ClassStatusTag status={gap.setelahKelas.status || gap.setelahKelas.rawItem?.status} />
                               </button>
                             ) : (
                               <span className="text-foreground/80" title={`Sebelum ${gap.setelahKelas?.mataKuliah}`}>
-                                Sebelum {gap.setelahKelas?.mataKuliah}
+                                <span>Sebelum </span>
+                                <span className="font-medium text-foreground">{gap.setelahKelas?.mataKuliah}</span>
+                                <ClassStatusTag status={gap.setelahKelas?.status || gap.setelahKelas?.rawItem?.status} />
                               </span>
                             )}
                           </div>
                         </>
                       ) : gap.tipeJeda === "sebelum_kelas" ? (
                         <>
-                          <div className="truncate">Awal hari</div>
+                          <div className="line-clamp-2 leading-relaxed">
+                            {gap.onlineClasses && gap.onlineClasses.length > 0 ? (
+                              <span>
+                                <span className="text-muted-foreground">Sesi daring: </span>
+                                {gap.onlineClasses.map((c, idx) => (
+                                  <React.Fragment key={idx}>
+                                    {idx > 0 && <span className="text-muted-foreground mr-1">,</span>}
+                                    {c.rawItem && onSelectItem ? (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          onSelectItem(c.rawItem!);
+                                        }}
+                                        className="hover:underline cursor-pointer font-medium text-foreground group-hover:text-primary transition-colors inline"
+                                        title={`Buka detail kelas: ${c.mataKuliah} (${c.dosen})`}
+                                      >
+                                        {c.mataKuliah}
+                                      </button>
+                                    ) : (
+                                      <span className="font-medium text-foreground">{c.mataKuliah}</span>
+                                    )}
+                                    <ClassStatusTag status={c.status || c.rawItem?.status} />
+                                  </React.Fragment>
+                                ))}
+                              </span>
+                            ) : (
+                              <span>Awal hari</span>
+                            )}
+                          </div>
                           <div className="truncate">
                             {gap.setelahKelas?.rawItem && onSelectItem ? (
                               <button
@@ -590,17 +730,20 @@ export function AslabRoomMonitor({
                                   e.stopPropagation();
                                   onSelectItem(gap.setelahKelas!.rawItem!);
                                 }}
-                                className="group/btn inline-flex items-center gap-1 text-left hover:text-emerald-600 dark:hover:text-emerald-400 hover:underline cursor-pointer transition-colors max-w-full"
+                                className="group/btn inline text-left hover:underline cursor-pointer transition-colors max-w-full"
                                 title={`Buka detail kelas: ${gap.setelahKelas.mataKuliah} (${gap.setelahKelas.dosen})`}
                               >
-                                <span className="truncate">
-                                  Sebelum <strong className="font-medium text-foreground/90 group-hover/btn:text-emerald-600 dark:group-hover/btn:text-emerald-400">{gap.setelahKelas.mataKuliah}</strong>
-                                </span>
-                                <ExternalLink className="size-2.5 shrink-0 opacity-60 group-hover/btn:opacity-100" />
+                                <span>Sebelum </span>
+                                <strong className="font-medium text-foreground group-hover/btn:text-primary">
+                                  {gap.setelahKelas.mataKuliah}
+                                </strong>
+                                <ClassStatusTag status={gap.setelahKelas.status || gap.setelahKelas.rawItem?.status} />
                               </button>
                             ) : (
                               <span className="text-foreground/80" title={`Sebelum ${gap.setelahKelas?.mataKuliah}`}>
-                                Sebelum {gap.setelahKelas?.mataKuliah}
+                                <span>Sebelum </span>
+                                <span className="font-medium text-foreground">{gap.setelahKelas?.mataKuliah}</span>
+                                <ClassStatusTag status={gap.setelahKelas?.status || gap.setelahKelas?.rawItem?.status} />
                               </span>
                             )}
                           </div>
@@ -615,22 +758,52 @@ export function AslabRoomMonitor({
                                   e.stopPropagation();
                                   onSelectItem(gap.sebelumKelas!.rawItem!);
                                 }}
-                                className="group/btn inline-flex items-center gap-1 text-left hover:text-emerald-600 dark:hover:text-emerald-400 hover:underline cursor-pointer transition-colors max-w-full"
+                                className="group/btn inline text-left hover:underline cursor-pointer transition-colors max-w-full"
                                 title={`Buka detail kelas: ${gap.sebelumKelas.mataKuliah} (${gap.sebelumKelas.dosen})`}
                               >
-                                <span className="truncate">
-                                  Setelah <strong className="font-medium text-foreground/90 group-hover/btn:text-emerald-600 dark:group-hover:text-emerald-400">{gap.sebelumKelas.mataKuliah}</strong>
-                                </span>
-                                <ExternalLink className="size-2.5 shrink-0 opacity-60 group-hover/btn:opacity-100" />
+                                <span>Setelah </span>
+                                <strong className="font-medium text-foreground group-hover/btn:text-primary">
+                                  {gap.sebelumKelas.mataKuliah}
+                                </strong>
+                                <ClassStatusTag status={gap.sebelumKelas.status || gap.sebelumKelas.rawItem?.status} />
                               </button>
                             ) : (
                               <span title={`Setelah ${gap.sebelumKelas?.mataKuliah}`}>
-                                Setelah {gap.sebelumKelas?.mataKuliah}
+                                <span>Setelah </span>
+                                <span className="font-medium text-foreground">{gap.sebelumKelas?.mataKuliah}</span>
+                                <ClassStatusTag status={gap.sebelumKelas?.status || gap.sebelumKelas?.rawItem?.status} />
                               </span>
                             )}
                           </div>
-                          <div className="truncate text-foreground/80">
-                            Hingga lab tutup ({gap.waktuSelesai} WIB)
+                          <div className="line-clamp-2 leading-relaxed text-foreground/80">
+                            {gap.onlineClasses && gap.onlineClasses.length > 0 ? (
+                              <span>
+                                <span className="text-muted-foreground">Sesi daring: </span>
+                                {gap.onlineClasses.map((c, idx) => (
+                                  <React.Fragment key={idx}>
+                                    {idx > 0 && <span className="text-muted-foreground mr-1">,</span>}
+                                    {c.rawItem && onSelectItem ? (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          onSelectItem(c.rawItem!);
+                                        }}
+                                        className="hover:underline cursor-pointer font-medium text-foreground group-hover:text-primary transition-colors inline"
+                                        title={`Buka detail kelas: ${c.mataKuliah} (${c.dosen})`}
+                                      >
+                                        {c.mataKuliah}
+                                      </button>
+                                    ) : (
+                                      <span className="font-medium text-foreground">{c.mataKuliah}</span>
+                                    )}
+                                    <ClassStatusTag status={c.status || c.rawItem?.status} />
+                                  </React.Fragment>
+                                ))}
+                              </span>
+                            ) : (
+                              `Hingga lab tutup (${gap.waktuSelesai} WIB)`
+                            )}
                           </div>
                         </>
                       )}

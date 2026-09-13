@@ -3,6 +3,7 @@ import { JadwalItem } from "./types";
 export interface LabGapClassRef {
   mataKuliah: string;
   dosen: string;
+  status?: string;
   rawItem?: JadwalItem;
 }
 
@@ -18,6 +19,7 @@ export interface LabGapInfo {
   tipeJeda: "sebelum_kelas" | "antar_kelas" | "setelah_kelas" | "seharian_kosong";
   sebelumKelas?: LabGapClassRef;
   setelahKelas?: LabGapClassRef;
+  onlineClasses?: LabGapClassRef[];
   formattedText: string;
 }
 
@@ -93,6 +95,41 @@ export function isLabRoom(roomName: string): boolean {
     lower.startsWith("lab") ||
     UNAMA_LABS.some((l) => l.toLowerCase() === lower)
   );
+}
+
+/**
+ * Cek apakah status perkuliahan adalah online / daring (tidak menggunakan ruangan laboratorium fisik)
+ */
+export function isOnlineClass(status?: string, ruangan?: string): boolean {
+  const s = (status || "").toLowerCase();
+  const r = (ruangan || "").toLowerCase();
+  return (
+    s.includes("(ol)") ||
+    s.includes("online") ||
+    s.includes("daring") ||
+    s.includes("zoom") ||
+    s.includes("elearning") ||
+    s.includes("e-learning") ||
+    r.includes("online") ||
+    r.includes("daring") ||
+    r.includes("zoom")
+  );
+}
+
+/**
+ * Cek apakah status perkuliahan dibatalkan
+ */
+export function isCancelledClass(status?: string): boolean {
+  if (!status) return false;
+  const s = status.toLowerCase();
+  return s.includes("cancel") || s.includes("batal");
+}
+
+/**
+ * Cek apakah kelas memakai ruangan laboratorium fisik secara nyata (tatap muka dan tidak batal)
+ */
+export function isPhysicalClass(status?: string, ruangan?: string): boolean {
+  return !isCancelledClass(status) && !isOnlineClass(status, ruangan);
 }
 
 /**
@@ -188,8 +225,7 @@ export function getCampusLabCloseTimes(items: JadwalItem[]): Record<string, numb
 
   for (const item of items) {
     if (
-      !item.status?.toLowerCase().includes("cancel") &&
-      !item.status?.toLowerCase().includes("batal") &&
+      isPhysicalClass(item.status, item.ruangan) &&
       isLabRoom(item.ruangan)
     ) {
       const campus = getCampusForRoom(item.ruangan, items);
@@ -251,10 +287,8 @@ export function getInUseRooms(
     currentMinutes = wibHours * 60 + wibMins;
   }
 
-  // Saring jadwal yang tidak dibatalkan
-  const validItems = items.filter(
-    (item) => !item.status?.toLowerCase().includes("cancel") && !item.status?.toLowerCase().includes("batal")
-  );
+  // Tampilkan seluruh jadwal hari ini (Tatap Muka, Online, maupun Batal)
+  const validItems = items.filter((item) => item.ruangan && item.waktuMulai);
 
   const allTodayUsed: InUseRoomInfo[] = [];
   const activeNow: InUseRoomInfo[] = [];
@@ -265,7 +299,8 @@ export function getInUseRooms(
     const endMins = startMins + 100; // 100 menit
     const waktuSelesai = minutesToTime(endMins);
 
-    const isLive = currentMinutes >= startMins && currentMinutes < endMins;
+    const isPhysical = isPhysicalClass(item.status, item.ruangan);
+    const isLive = isPhysical && currentMinutes >= startMins && currentMinutes < endMins;
     const elapsed = Math.max(0, currentMinutes - startMins);
     const progress = Math.min(100, Math.max(0, Math.round((elapsed / 100) * 100)));
 
@@ -331,25 +366,46 @@ export function calculateLabGaps(
       continue;
     }
 
-    // Ambil jadwal di ruangan ini yang tidak batal
-    const roomClasses = items
+    // Seluruh jadwal di ruangan ini
+    const allRoomItems = items
       .filter(
         (item) =>
           item.ruangan?.trim().toLowerCase() === room.trim().toLowerCase() &&
-          !item.status?.toLowerCase().includes("cancel") &&
-          !item.status?.toLowerCase().includes("batal")
+          item.waktuMulai
       )
       .sort((a, b) => timeToMinutes(a.waktuMulai) - timeToMinutes(b.waktuMulai));
 
+    // Hanya kelas tatap muka fisik yang benar-benar menempati ruangan laboratorium fisik
+    const physicalClasses = allRoomItems.filter((item) =>
+      isPhysicalClass(item.status, item.ruangan)
+    );
+
     const isLabor = isLabRoom(room);
 
-    // Kasus 1: Ruangan tidak ada jadwal sama sekali sepanjang hari, tapi lab kampus buka s/d campusClose
-    if (roomClasses.length === 0) {
+    // Helper untuk mengumpulkan kelas daring / batal yang berlangsung di dalam rentang jeda ini
+    const getOnlineClassesInRange = (startMins: number, endMins: number): LabGapClassRef[] => {
+      return allRoomItems
+        .filter((item) => {
+          if (isPhysicalClass(item.status, item.ruangan)) return false;
+          const s = timeToMinutes(item.waktuMulai);
+          return s >= startMins && s < endMins;
+        })
+        .map((item) => ({
+          mataKuliah: item.mataKuliah,
+          dosen: item.dosen,
+          status: item.status,
+          rawItem: item,
+        }));
+    };
+
+    // Kasus 1: Tidak ada sesi perkuliahan fisik sama sekali di lab ini hari ini (DIGABUNG SEHARIAN PENUH)
+    if (physicalClasses.length === 0) {
       if (campusClose - CAMPUS_START >= MIN_GAP_MINUTES) {
         const durationMins = campusClose - CAMPUS_START;
         const totalJam = formatDuration(durationMins);
         const endTimeStr = minutesToTime(campusClose);
         const text = `${room} kosong 07:30 - ${endTimeStr} (${totalJam})`;
+        const onlineInGap = getOnlineClassesInRange(CAMPUS_START, campusClose);
 
         gaps.push({
           id: `gap-${room}-full`,
@@ -361,22 +417,24 @@ export function calculateLabGaps(
           waktuMulai: "07:30",
           waktuSelesai: endTimeStr,
           tipeJeda: "seharian_kosong",
+          onlineClasses: onlineInGap.length > 0 ? onlineInGap : undefined,
           formattedText: text,
         });
       }
       continue;
     }
 
-    // Kasus 2: Jeda di awal hari sebelum kelas pertama
-    const firstClass = roomClasses[0];
-    const firstClassStart = timeToMinutes(firstClass.waktuMulai);
-    const effectiveFirstStart = Math.min(firstClassStart, campusClose);
+    // Kasus 2: Jeda di awal hari sebelum kelas fisik pertama (otomatis menggabungkan sesi daring pagi ke dalam satu jeda)
+    const firstPhysical = physicalClasses[0];
+    const firstPhysicalStart = timeToMinutes(firstPhysical.waktuMulai);
+    const effectiveFirstStart = Math.min(firstPhysicalStart, campusClose);
 
     if (effectiveFirstStart - CAMPUS_START >= MIN_GAP_MINUTES) {
       const durationMins = effectiveFirstStart - CAMPUS_START;
       const totalJam = formatDuration(durationMins);
       const waktuSelesai = minutesToTime(effectiveFirstStart);
       const text = `${room} kosong 07:30 - ${waktuSelesai} (${totalJam})`;
+      const onlineInGap = getOnlineClassesInRange(CAMPUS_START, effectiveFirstStart);
 
       gaps.push({
         id: `gap-${room}-start`,
@@ -389,29 +447,29 @@ export function calculateLabGaps(
         waktuSelesai,
         tipeJeda: "sebelum_kelas",
         setelahKelas: {
-          mataKuliah: firstClass.mataKuliah,
-          dosen: firstClass.dosen,
-          rawItem: firstClass,
+          mataKuliah: firstPhysical.mataKuliah,
+          dosen: firstPhysical.dosen,
+          status: firstPhysical.status,
+          rawItem: firstPhysical,
         },
+        onlineClasses: onlineInGap.length > 0 ? onlineInGap : undefined,
         formattedText: text,
       });
     }
 
-    // Kasus 3: Jeda antar kelas sepanjang hari (hanya selama jam buka lab kampus)
-    for (let i = 0; i < roomClasses.length - 1; i++) {
-      const currentClass = roomClasses[i];
-      const nextClass = roomClasses[i + 1];
+    // Kasus 3: Jeda antar kelas fisik (otomatis menggabungkan sesi daring di antara dua kelas fisik)
+    for (let i = 0; i < physicalClasses.length - 1; i++) {
+      const currentPhysical = physicalClasses[i];
+      const nextPhysical = physicalClasses[i + 1];
 
-      const currentStart = timeToMinutes(currentClass.waktuMulai);
+      const currentStart = timeToMinutes(currentPhysical.waktuMulai);
       const currentEnd = currentStart + 100; // Durasi standar 100 menit
-      const nextStart = timeToMinutes(nextClass.waktuMulai);
+      const nextStart = timeToMinutes(nextPhysical.waktuMulai);
 
-      // Jika jeda ini dimulai saat lab kampus sudah tutup (misal setelah 17:00 di Kobar), jangan buat jeda
       if (currentEnd >= campusClose) {
         continue;
       }
 
-      // Batasi jeda tidak melebihi jam tutup lab kampus
       const effectiveEnd = Math.min(nextStart, campusClose);
 
       if (effectiveEnd - currentEnd >= MIN_GAP_MINUTES) {
@@ -420,6 +478,7 @@ export function calculateLabGaps(
         const startTimeStr = minutesToTime(currentEnd);
         const endTimeStr = minutesToTime(effectiveEnd);
         const text = `${room} kosong ${startTimeStr} - ${endTimeStr} (${totalJam})`;
+        const onlineInGap = getOnlineClassesInRange(currentEnd, effectiveEnd);
 
         gaps.push({
           id: `gap-${room}-${i}`,
@@ -432,31 +491,34 @@ export function calculateLabGaps(
           waktuSelesai: endTimeStr,
           tipeJeda: "antar_kelas",
           sebelumKelas: {
-            mataKuliah: currentClass.mataKuliah,
-            dosen: currentClass.dosen,
-            rawItem: currentClass,
+            mataKuliah: currentPhysical.mataKuliah,
+            dosen: currentPhysical.dosen,
+            status: currentPhysical.status,
+            rawItem: currentPhysical,
           },
           setelahKelas: {
-            mataKuliah: nextClass.mataKuliah,
-            dosen: nextClass.dosen,
-            rawItem: nextClass,
+            mataKuliah: nextPhysical.mataKuliah,
+            dosen: nextPhysical.dosen,
+            status: nextPhysical.status,
+            rawItem: nextPhysical,
           },
+          onlineClasses: onlineInGap.length > 0 ? onlineInGap : undefined,
           formattedText: text,
         });
       }
     }
 
-    // Kasus 4: Jeda di akhir hari setelah kelas terakhir, HANYA sampai lab terakhir di kampus tersebut tutup
-    const lastClass = roomClasses[roomClasses.length - 1];
-    const lastClassEnd = timeToMinutes(lastClass.waktuMulai) + 100;
+    // Kasus 4: Jeda setelah kelas fisik terakhir hingga lab kampus tutup
+    const lastPhysical = physicalClasses[physicalClasses.length - 1];
+    const lastPhysicalEnd = timeToMinutes(lastPhysical.waktuMulai) + 100;
 
-    // Jika lab ruangan ini selesai sebelum jam tutup kampus (minimal jeda 30 menit)
-    if (lastClassEnd < campusClose && campusClose - lastClassEnd >= MIN_GAP_MINUTES) {
-      const durationMins = campusClose - lastClassEnd;
+    if (lastPhysicalEnd < campusClose && campusClose - lastPhysicalEnd >= MIN_GAP_MINUTES) {
+      const durationMins = campusClose - lastPhysicalEnd;
       const totalJam = formatDuration(durationMins);
-      const startTimeStr = minutesToTime(lastClassEnd);
+      const startTimeStr = minutesToTime(lastPhysicalEnd);
       const endTimeStr = minutesToTime(campusClose);
       const text = `${room} kosong ${startTimeStr} - ${endTimeStr} (${totalJam})`;
+      const onlineInGap = getOnlineClassesInRange(lastPhysicalEnd, campusClose);
 
       gaps.push({
         id: `gap-${room}-end`,
@@ -469,10 +531,12 @@ export function calculateLabGaps(
         waktuSelesai: endTimeStr,
         tipeJeda: "setelah_kelas",
         sebelumKelas: {
-          mataKuliah: lastClass.mataKuliah,
-          dosen: lastClass.dosen,
-          rawItem: lastClass,
+          mataKuliah: lastPhysical.mataKuliah,
+          dosen: lastPhysical.dosen,
+          status: lastPhysical.status,
+          rawItem: lastPhysical,
         },
+        onlineClasses: onlineInGap.length > 0 ? onlineInGap : undefined,
         formattedText: text,
       });
     }
