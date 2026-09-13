@@ -87,6 +87,15 @@ async function main() {
     }
 
     console.log(`\n🎉 Selesai! Total ${totalSynced} data jadwal berhasil disinkronkan ke Supabase.`);
+
+    try {
+      const apiPort = process.env.PORT || 8000;
+      await fetch(`http://localhost:${apiPort}/api/cache/clear`, { method: 'POST' });
+      console.log('⚡ Cache Redis jadwal berhasil dibersihkan otomatis!');
+    } catch {
+      // Abaikan jika server API belum menyala
+    }
+
     process.exit(0);
   }
 }
