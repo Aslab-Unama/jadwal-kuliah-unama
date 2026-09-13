@@ -66,7 +66,7 @@ export const app = new Elysia()
             conditions.push(ilike(jadwalLab.ruangan, `%${roomFilter}%`));
           }
 
-          const limit = Math.min(query.limit ?? 50, 200);
+          const limit = Math.min(query.limit ?? 50, 500);
           const offset = query.offset ?? 0;
 
           const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
@@ -110,7 +110,7 @@ export const app = new Elysia()
             ruangan: t.Optional(t.String()),
             ruangLabor: t.Optional(t.String()),
             status: t.Optional(t.String()),
-            limit: t.Optional(t.Numeric({ default: 50, minimum: 1, maximum: 200 })),
+            limit: t.Optional(t.Numeric({ default: 50, minimum: 1, maximum: 500 })),
             offset: t.Optional(t.Numeric({ default: 0, minimum: 0 })),
           }),
         }
