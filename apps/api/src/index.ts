@@ -243,6 +243,74 @@ export const app = new Elysia()
           }),
         }
       )
+      .post(
+        '/auth/login',
+        async ({ body, set }) => {
+          const expectedSecret =
+            process.env.ASLAB_SECRET_CODE || process.env.ADMIN_PASSWORD
+          const { secretCode } = body;
+
+          if (!secretCode || secretCode !== expectedSecret) {
+            set.status = 401;
+            return {
+              success: false,
+              message: 'Secret code tidak valid. Akses ditolak.',
+            };
+          }
+
+          const timestamp = Date.now();
+          const token = Buffer.from(`aslab:${timestamp}`).toString('base64');
+
+          return {
+            success: true,
+            message: 'Login berhasil sebagai Asisten Laboratorium',
+            data: {
+              token,
+              role: 'aslab',
+              authenticatedAt: new Date().toISOString(),
+            },
+          };
+        },
+        {
+          body: t.Object({
+            secretCode: t.String(),
+          }),
+        }
+      )
+      .get('/auth/verify', async ({ headers, set }) => {
+        const authHeader = headers['authorization'];
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+          set.status = 401;
+          return {
+            success: false,
+            message: 'Sesi tidak ditemukan atau kadaluarsa',
+          };
+        }
+
+        const token = authHeader.replace('Bearer ', '').trim();
+        try {
+          const decoded = Buffer.from(token, 'base64').toString('utf-8');
+          if (!decoded.startsWith('aslab:')) {
+            set.status = 401;
+            return {
+              success: false,
+              message: 'Sesi tidak valid',
+            };
+          }
+
+          return {
+            success: true,
+            authenticated: true,
+            role: 'aslab',
+          };
+        } catch {
+          set.status = 401;
+          return {
+            success: false,
+            message: 'Sesi tidak valid',
+          };
+        }
+      })
   )
   .listen({
     port: PORT,

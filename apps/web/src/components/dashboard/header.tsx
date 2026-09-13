@@ -2,9 +2,11 @@
 
 import * as React from "react";
 import Image from "next/image";
+import Link from "next/link";
+import { useTheme } from "next-themes";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CalendarDays, Clock, Moon, RefreshCw, Sun } from "lucide-react";
+import { CalendarDays, Clock, Lock, LogOut, Moon, RefreshCw, Sun } from "lucide-react";
 
 interface HeaderProps {
   onRefresh?: () => void;
@@ -12,22 +14,16 @@ interface HeaderProps {
 }
 
 export function Header({ onRefresh, isRefreshing }: HeaderProps) {
-  const [isDark, setIsDark] = React.useState<boolean>(false);
+  const { theme, setTheme, resolvedTheme } = useTheme();
+  const [mounted, setMounted] = React.useState<boolean>(false);
   const [currentTime, setCurrentTime] = React.useState<string>("");
+  const [isAslab, setIsAslab] = React.useState<boolean>(false);
 
   React.useEffect(() => {
-    // Cek preferensi tema awal
-    const isDarkMode =
-      localStorage.getItem("theme") === "dark" ||
-      (!("theme" in localStorage) &&
-        window.matchMedia("(prefers-color-scheme: dark)").matches);
+    setMounted(true);
 
-    setIsDark(isDarkMode);
-    if (isDarkMode) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
+    // Cek status login Aslab
+    setIsAslab(localStorage.getItem("aslab_logged_in") === "true");
 
     // Jam WIB
     const updateTime = () => {
@@ -46,37 +42,17 @@ export function Header({ onRefresh, isRefreshing }: HeaderProps) {
     return () => clearInterval(interval);
   }, []);
 
+  const isDark = mounted ? (resolvedTheme || theme) === "dark" : false;
+
   const toggleTheme = () => {
-    // Nonaktifkan semua transisi CSS saat toggle tema agar perubahan instan tanpa fade animasi
-    const css = document.createElement("style");
-    css.appendChild(
-      document.createTextNode(
-        `*, *::before, *::after {
-          -webkit-transition: none !important;
-          -moz-transition: none !important;
-          -o-transition: none !important;
-          -ms-transition: none !important;
-          transition: none !important;
-        }`
-      )
-    );
-    document.head.appendChild(css);
+    setTheme(isDark ? "light" : "dark");
+  };
 
-    if (isDark) {
-      document.documentElement.classList.remove("dark");
-      localStorage.setItem("theme", "light");
-      setIsDark(false);
-    } else {
-      document.documentElement.classList.add("dark");
-      localStorage.setItem("theme", "dark");
-      setIsDark(true);
-    }
 
-    // Force style reflow lalu hapus style override seketika
-    window.getComputedStyle(css).opacity;
-    requestAnimationFrame(() => {
-      document.head.removeChild(css);
-    });
+  const handleLogout = () => {
+    localStorage.removeItem("aslab_token");
+    localStorage.removeItem("aslab_logged_in");
+    setIsAslab(false);
   };
 
   return (
@@ -102,6 +78,11 @@ export function Header({ onRefresh, isRefreshing }: HeaderProps) {
               <Badge variant="outline" className="hidden sm:inline-flex text-[11px] font-normal">
                 Genap 2025/2026
               </Badge>
+              {isAslab && (
+                <Badge variant="default" className="text-[10px] font-normal bg-emerald-600 text-white">
+                  Mode Aslab
+                </Badge>
+              )}
             </div>
           </div>
         </div>
@@ -132,6 +113,31 @@ export function Header({ onRefresh, isRefreshing }: HeaderProps) {
               <RefreshCw className={`size-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
               <span className="hidden sm:inline">Perbarui</span>
             </Button>
+          )}
+
+          {isAslab ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLogout}
+              className="h-9 px-2.5 gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/10"
+              aria-label="Keluar dari sesi Aslab"
+            >
+              <LogOut className="size-3.5" />
+              <span className="hidden sm:inline">Keluar Aslab</span>
+            </Button>
+          ) : (
+            <Link href="/login">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 px-2.5 gap-1.5"
+                aria-label="Masuk sebagai Asisten Lab"
+              >
+                <Lock className="size-3.5" />
+                <span className="hidden sm:inline">Login Aslab</span>
+              </Button>
+            </Link>
           )}
 
           <Button
