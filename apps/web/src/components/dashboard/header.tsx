@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import Image from "next/image";
-import Link from "next/link";
 import { useTheme } from "next-themes";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -52,7 +51,7 @@ export function Header({ onRefresh, isRefreshing }: HeaderProps) {
   const handleLogout = () => {
     localStorage.removeItem("aslab_token");
     localStorage.removeItem("aslab_logged_in");
-    setIsAslab(false);
+    window.location.reload();
   };
 
   return (
@@ -120,24 +119,24 @@ export function Header({ onRefresh, isRefreshing }: HeaderProps) {
               variant="outline"
               size="sm"
               onClick={handleLogout}
-              className="h-9 px-2.5 gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/10"
+              className="h-9 px-2.5 gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/10 cursor-pointer"
               aria-label="Keluar dari sesi Aslab"
             >
               <LogOut className="size-3.5" />
               <span className="hidden sm:inline">Keluar Aslab</span>
             </Button>
           ) : (
-            <Link href="/login">
+            <a href="/login">
               <Button
                 variant="outline"
                 size="sm"
-                className="h-9 px-2.5 gap-1.5"
+                className="h-9 px-2.5 gap-1.5 cursor-pointer"
                 aria-label="Masuk sebagai Asisten Lab"
               >
                 <Lock className="size-3.5" />
                 <span className="hidden sm:inline">Login Aslab</span>
               </Button>
-            </Link>
+            </a>
           )}
 
           <Button

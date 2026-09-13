@@ -2,8 +2,6 @@
 
 import * as React from "react";
 import Image from "next/image";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { cn } from "cn";
 import {
   AlertCircle,
@@ -35,7 +33,6 @@ export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
-  const router = useRouter();
   const { theme, setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = React.useState(false);
   const [secretCode, setSecretCode] = React.useState("");
@@ -84,8 +81,8 @@ export function LoginForm({
           localStorage.setItem("aslab_logged_in", "true");
         }
         setTimeout(() => {
-          router.push("/");
-        }, 800);
+          window.location.href = "/";
+        }, 500);
       } else {
         setError(
           data.message || "Secret code tidak valid. Akses khusus Asisten Lab."
@@ -98,8 +95,8 @@ export function LoginForm({
         localStorage.setItem("aslab_token", "dev-local-session");
         localStorage.setItem("aslab_logged_in", "true");
         setTimeout(() => {
-          router.push("/");
-        }, 800);
+          window.location.href = "/";
+        }, 500);
       } else {
         setError("Koneksi ke backend gagal atau secret code tidak sesuai.");
       }
@@ -114,19 +111,19 @@ export function LoginForm({
         <FieldGroup>
           {/* Top Bar: Back & Theme Toggle */}
           <div className="flex items-center justify-between w-full pb-1">
-            <Link
+            <a
               href="/"
               className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
               <ArrowLeft className="size-3.5" />
               <span>Kembali</span>
-            </Link>
+            </a>
             <Button
               variant="outline"
               size="icon-xs"
               type="button"
               onClick={toggleTheme}
-              className="size-7"
+              className="size-7 cursor-pointer"
               aria-label={isDark ? "Ganti ke mode terang" : "Ganti ke mode gelap"}
             >
               {isDark ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
@@ -135,7 +132,7 @@ export function LoginForm({
 
           {/* Header Brand & Identity */}
           <div className="flex flex-col items-center gap-3 text-center">
-            <Link
+            <a
               href="/"
               className="flex flex-col items-center gap-2 font-medium focus:outline-none"
               tabIndex={-1}
@@ -151,7 +148,7 @@ export function LoginForm({
                 />
               </div>
               <span className="sr-only">UNAMA</span>
-            </Link>
+            </a>
 
             <div className="space-y-1">
               <div className="flex items-center justify-center gap-2">
@@ -255,13 +252,13 @@ export function LoginForm({
 
           {/* Back Navigation */}
           <div className="pt-2 text-center">
-            <Link
+            <a
               href="/"
               className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
               <ArrowLeft className="size-3.5" />
               <span>Kembali ke Jadwal Kuliah</span>
-            </Link>
+            </a>
           </div>
         </FieldGroup>
       </form>
