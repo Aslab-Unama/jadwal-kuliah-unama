@@ -90,9 +90,14 @@ export async function scrapeLabSchedulePage(page = 1, ruang = ''): Promise<Scrap
       tanggal = rawDateTime;
     }
 
-    // Dosen & Matakuliah
+    // Dosen & Matakuliah (Tangani jika ada team teaching / multiple dosen)
     const tdDosenMatkul = $(tds[2]);
-    const dosen = tdDosenMatkul.find('span.font-weight-bold').text().trim();
+    const dosenList: string[] = [];
+    tdDosenMatkul.find('span.font-weight-bold').each((_, s) => {
+      const text = $(s).text().trim();
+      if (text) dosenList.push(text);
+    });
+    const dosen = dosenList.length > 0 ? dosenList.join(' / ') : tdDosenMatkul.find('span.font-weight-bold').text().trim();
 
     // Text kelas & matkul: "01PS2 :: Pemrograman Berorientasi Objek"
     const rawMatkulDiv = tdDosenMatkul.children('div').last().text().trim();
