@@ -21,6 +21,28 @@ export default function RootLayout({
 }) {
   return (
     <html lang="id" className={cn("font-sans antialiased", inter.variable)} suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var stored = localStorage.getItem('theme');
+                  var supportDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                  var isDark = stored === 'dark' || ((!stored || stored === 'system') && supportDark);
+                  if (isDark) {
+                    document.documentElement.classList.add('dark');
+                    document.documentElement.style.colorScheme = 'dark';
+                  } else {
+                    document.documentElement.classList.remove('dark');
+                    document.documentElement.style.colorScheme = 'light';
+                  }
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
       <body className="min-h-screen bg-background text-foreground selection:bg-primary/20">
         <ThemeProvider
           attribute="class"
