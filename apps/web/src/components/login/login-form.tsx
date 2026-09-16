@@ -1,5 +1,11 @@
 "use client";
 
+// Helper cookie — simpan selama 7 hari
+function setCookie(name: string, value: string, days = 7) {
+  const expires = new Date(Date.now() + days * 864e5).toUTCString();
+  document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/`;
+}
+
 import * as React from "react";
 import Image from "next/image";
 import { cn } from "cn";
@@ -77,8 +83,8 @@ export function LoginForm({
       if (response.ok && data.success) {
         setIsSuccess(true);
         if (data.data?.token) {
-          localStorage.setItem("aslab_token", data.data.token);
-          localStorage.setItem("aslab_logged_in", "true");
+          setCookie("aslab_token", data.data.token);
+          setCookie("aslab_logged_in", "true");
         }
         setTimeout(() => {
           window.location.href = "/";
@@ -92,8 +98,8 @@ export function LoginForm({
       // Sediakan fallback jika backend offline di environment dev
       if (secretCode.trim() === "admin123") {
         setIsSuccess(true);
-        localStorage.setItem("aslab_token", "dev-local-session");
-        localStorage.setItem("aslab_logged_in", "true");
+        setCookie("aslab_token", "dev-local-session");
+        setCookie("aslab_logged_in", "true");
         setTimeout(() => {
           window.location.href = "/";
         }, 500);
@@ -123,10 +129,12 @@ export function LoginForm({
               size="icon-xs"
               type="button"
               onClick={toggleTheme}
-              className="size-7 cursor-pointer"
-              aria-label={isDark ? "Ganti ke mode terang" : "Ganti ke mode gelap"}
+              className="relative size-7 cursor-pointer"
+              aria-label="Ganti mode tema tampilan"
+              title="Ganti tema tampilan"
             >
-              {isDark ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
+              <Sun className="size-3.5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+              <Moon className="absolute size-3.5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
             </Button>
           </div>
 

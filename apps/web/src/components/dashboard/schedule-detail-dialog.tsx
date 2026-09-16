@@ -26,6 +26,7 @@ import {
   User,
 } from "lucide-react";
 import { cn } from "cn";
+import { LiveRunningClock } from "./aslab-room-monitor";
 
 interface ScheduleDetailDialogProps {
   item: JadwalItem | null;
@@ -68,15 +69,21 @@ export function ScheduleDetailDialog({ item, onClose }: ScheduleDetailDialogProp
 
   return (
     <Dialog open={Boolean(item)} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-lg p-6">
+      <DialogContent className="sm:max-w-lg p-6 rounded-none border border-border bg-card">
         {item && (
           <div className="space-y-5">
-            <DialogHeader className="space-y-1.5 text-left">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="outline" className="font-mono text-xs font-semibold px-2 py-0.5">
-                  {item.kodeKelas}
-                </Badge>
-                <StatusBadge status={item.status} />
+            <DialogHeader className="space-y-2 text-left pb-3 border-b border-border">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="outline" className="font-mono text-xs font-semibold px-2 py-0.5 rounded-none">
+                    {item.kodeKelas}
+                  </Badge>
+                  <StatusBadge status={item.status} className="rounded-none text-xs" />
+                </div>
+                {/* Jam Berjalan Real-Time (WIB) */}
+                <div className="shrink-0">
+                  <LiveRunningClock />
+                </div>
               </div>
               <DialogTitle className="text-lg font-bold leading-snug text-foreground">
                 {item.mataKuliah}
@@ -87,7 +94,7 @@ export function ScheduleDetailDialog({ item, onClose }: ScheduleDetailDialogProp
             </DialogHeader>
 
             {/* Detailed Grid Information */}
-            <div className="border border-border bg-muted/20 p-4 space-y-3 text-xs">
+            <div className="border border-border bg-muted/20 p-4 space-y-3 text-xs rounded-none">
               <div className="flex items-start gap-3">
                 <User className="size-4 shrink-0 text-muted-foreground mt-0.5" />
                 <div>
@@ -141,10 +148,10 @@ export function ScheduleDetailDialog({ item, onClose }: ScheduleDetailDialogProp
                 rel="noopener noreferrer"
                 className={cn(
                   buttonVariants({ size: "sm" }),
-                  "bg-black text-white hover:bg-neutral-800 border border-neutral-900 dark:bg-black dark:text-white dark:border-neutral-700 dark:hover:bg-neutral-900 gap-1.5 h-9 text-xs font-medium shadow-xs"
+                  "rounded-none bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5 h-9 text-xs font-medium cursor-pointer shadow-2xs"
                 )}
               >
-                <CalendarPlus className="size-3.5 text-white" />
+                <CalendarPlus className="size-3.5" />
                 <span>+ Google Calendar</span>
               </a>
 
@@ -153,7 +160,7 @@ export function ScheduleDetailDialog({ item, onClose }: ScheduleDetailDialogProp
                 variant="outline"
                 size="sm"
                 onClick={handleCopy}
-                className="gap-1.5 h-9 text-xs"
+                className="rounded-none gap-1.5 h-9 text-xs cursor-pointer border-border"
               >
                 {copied ? (
                   <>

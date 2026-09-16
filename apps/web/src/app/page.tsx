@@ -1,5 +1,12 @@
 "use client";
 
+// Helper cookie
+function getCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(new RegExp("(?:^|; )" + name + "=([^;]*)"));
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
 import * as React from "react";
 import { Header } from "@/components/dashboard/header";
 import { StatsOverview } from "@/components/dashboard/stats-overview";
@@ -43,7 +50,7 @@ export default function HomePage() {
 
   // Inisialisasi status Aslab dan fetch seluruh database ke state sekali di awal
   React.useEffect(() => {
-    setIsAslab(localStorage.getItem("aslab_logged_in") === "true");
+    setIsAslab(getCookie("aslab_logged_in") === "true");
     fetchAllSchedules();
   }, [fetchAllSchedules, setIsAslab]);
 

@@ -40,8 +40,6 @@ export interface InUseRoomInfo {
 }
 
 export const UNAMA_LABS = [
-  "Labor 1.1",
-  "Labor 1.2",
   "Labor 1.3",
   "Labor 1.4",
   "Labor 1.5",
@@ -49,11 +47,11 @@ export const UNAMA_LABS = [
   "Labor 1.7",
   "Labor 1.8",
   "Labor 1.9",
-  "Labor 2.1",
-  "Labor 2.2",
-  "Labor 2.3",
-  "Labor 3.1",
+  "Labor 2.7",
   "Labor 3.2",
+  "Labor 4.1",
+  "Labor Cisco 4.3",
+  "Gedung Pasca, Lab. B2.3",
 ];
 
 /**

@@ -9,8 +9,6 @@ const FALLBACK_SUMMARY: JadwalSummaryData = {
   totalCancel: 493,
   kampusList: ["Kampus Thehok", "Kampus Kobar"],
   ruanganList: [
-    "Labor 1.1",
-    "Labor 1.2",
     "Labor 1.3",
     "Labor 1.4",
     "Labor 1.5",
@@ -18,11 +16,11 @@ const FALLBACK_SUMMARY: JadwalSummaryData = {
     "Labor 1.7",
     "Labor 1.8",
     "Labor 1.9",
-    "Labor 2.1",
-    "Labor 2.2",
-    "Labor 2.3",
-    "Labor 3.1",
+    "Labor 2.7",
     "Labor 3.2",
+    "Labor 4.1",
+    "Labor Cisco 4.3",
+    "Gedung Pasca, Lab. B2.3",
   ],
 };
 
@@ -48,7 +46,7 @@ const FALLBACK_ITEMS: JadwalItem[] = [
     kodeKelas: "02SI3",
     mataKuliah: "Basis Data Lanjut",
     kampus: "Kampus Thehok",
-    ruangan: "Labor 2.1",
+    ruangan: "Labor 2.7",
     status: "OnSchedule (TM)",
   },
   {
@@ -72,7 +70,7 @@ const FALLBACK_ITEMS: JadwalItem[] = [
     kodeKelas: "02TI4",
     mataKuliah: "Jaringan Komputer & Komunikasi Data",
     kampus: "Kampus Thehok",
-    ruangan: "Labor 1.2",
+    ruangan: "Labor 1.4",
     status: "OnSchedule (TM)",
   },
   {
@@ -84,7 +82,7 @@ const FALLBACK_ITEMS: JadwalItem[] = [
     kodeKelas: "04SK1",
     mataKuliah: "Sistem Tertanam & IoT",
     kampus: "Kampus Kobar",
-    ruangan: "Labor 3.1",
+    ruangan: "Labor 1.7",
     status: "OnSchedule (TM)",
   },
   {
@@ -96,7 +94,7 @@ const FALLBACK_ITEMS: JadwalItem[] = [
     kodeKelas: "01TI2",
     mataKuliah: "Struktur Data & Algoritma",
     kampus: "Kampus Thehok",
-    ruangan: "Labor 1.1",
+    ruangan: "Labor 1.3",
     status: "OnSchedule (TM)",
   },
   {
@@ -108,7 +106,7 @@ const FALLBACK_ITEMS: JadwalItem[] = [
     kodeKelas: "05SI2",
     mataKuliah: "Kecerdasan Buatan (Artificial Intelligence)",
     kampus: "Kampus Thehok",
-    ruangan: "Labor 2.2",
+    ruangan: "Labor 3.2",
     status: "Cancel",
   },
   {
@@ -156,7 +154,7 @@ const FALLBACK_ITEMS: JadwalItem[] = [
     kodeKelas: "07TI8",
     mataKuliah: "Praktikum Rekayasa Perangkat Lunak",
     kampus: "Kampus Kobar",
-    ruangan: "Labor 2.3",
+    ruangan: "Labor 1.9",
     status: "OnSchedule (TM)",
   },
   {

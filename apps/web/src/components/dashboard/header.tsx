@@ -1,5 +1,16 @@
 "use client";
 
+// Helper cookie
+function getCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(new RegExp("(?:^|; )" + name + "=([^;]*)"));
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+function deleteCookie(name: string) {
+  document.cookie = `${name}=; Max-Age=0; path=/`;
+}
+
 import * as React from "react";
 import Image from "next/image";
 import { useTheme } from "next-themes";
@@ -22,7 +33,7 @@ export function Header({ onRefresh, isRefreshing }: HeaderProps) {
     setMounted(true);
 
     // Cek status login Aslab
-    setIsAslab(localStorage.getItem("aslab_logged_in") === "true");
+    setIsAslab(getCookie("aslab_logged_in") === "true");
 
     // Jam WIB
     const updateTime = () => {
@@ -49,8 +60,8 @@ export function Header({ onRefresh, isRefreshing }: HeaderProps) {
 
 
   const handleLogout = () => {
-    localStorage.removeItem("aslab_token");
-    localStorage.removeItem("aslab_logged_in");
+    deleteCookie("aslab_token");
+    deleteCookie("aslab_logged_in");
     window.location.reload();
   };
 
@@ -102,11 +113,6 @@ export function Header({ onRefresh, isRefreshing }: HeaderProps) {
             </div>
           )}
 
-          <div className="hidden lg:flex items-center gap-1.5 bg-muted/60 px-2.5 py-1 text-xs text-muted-foreground">
-            <CalendarDays className="size-3.5" />
-            <span>Tahun Akademik 2025/2026</span>
-          </div>
-
           {onRefresh && (
             <Button
               variant="outline"
@@ -152,10 +158,12 @@ export function Header({ onRefresh, isRefreshing }: HeaderProps) {
             variant="outline"
             size="icon"
             onClick={toggleTheme}
-            className="h-8 w-8 sm:h-9 sm:w-9"
-            aria-label={isDark ? "Ganti ke mode terang" : "Ganti ke mode gelap"}
+            className="relative h-8 w-8 sm:h-9 sm:w-9 cursor-pointer"
+            aria-label="Ganti mode tema tampilan"
+            title="Ganti tema tampilan"
           >
-            {isDark ? <Sun className="size-3.5 sm:size-4" /> : <Moon className="size-3.5 sm:size-4" />}
+            <Sun className="size-3.5 sm:size-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+            <Moon className="absolute size-3.5 sm:size-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
           </Button>
         </div>
       </div>
