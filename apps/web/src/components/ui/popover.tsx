@@ -12,20 +12,40 @@ function PopoverTrigger({ ...props }: PopoverPrimitive.Trigger.Props) {
   return <PopoverPrimitive.Trigger data-slot="popover-trigger" {...props} />
 }
 
+function PopoverPortal({ container, ...props }: PopoverPrimitive.Portal.Props) {
+  const [fullscreenElement, setFullscreenElement] = React.useState<HTMLElement | null>(null);
+
+  React.useEffect(() => {
+    const handleFs = () => {
+      setFullscreenElement((document.fullscreenElement as HTMLElement) || null);
+    };
+    handleFs();
+    document.addEventListener("fullscreenchange", handleFs);
+    return () => document.removeEventListener("fullscreenchange", handleFs);
+  }, []);
+
+  const targetContainer = container ?? fullscreenElement ?? undefined;
+
+  return <PopoverPrimitive.Portal data-slot="popover-portal" container={targetContainer} {...props} />;
+}
+
 function PopoverContent({
   className,
   align = "center",
   alignOffset = 0,
   side = "bottom",
   sideOffset = 4,
+  container,
   ...props
 }: PopoverPrimitive.Popup.Props &
   Pick<
     PopoverPrimitive.Positioner.Props,
     "align" | "alignOffset" | "side" | "sideOffset"
-  >) {
+  > & {
+    container?: PopoverPrimitive.Portal.Props["container"];
+  }) {
   return (
-    <PopoverPrimitive.Portal>
+    <PopoverPortal container={container}>
       <PopoverPrimitive.Positioner
         align={align}
         alignOffset={alignOffset}
@@ -42,7 +62,7 @@ function PopoverContent({
           {...props}
         />
       </PopoverPrimitive.Positioner>
-    </PopoverPrimitive.Portal>
+    </PopoverPortal>
   )
 }
 
@@ -84,6 +104,7 @@ export {
   PopoverContent,
   PopoverDescription,
   PopoverHeader,
+  PopoverPortal,
   PopoverTitle,
   PopoverTrigger,
 }

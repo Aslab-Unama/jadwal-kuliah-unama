@@ -182,6 +182,9 @@ export function normalizeCampus(campus?: string): string {
  * Ambil kampus dari ruangan berdasarkan data jadwal atau pola nama ruangan
  */
 export function getCampusForRoom(room: string, items?: JadwalItem[]): string {
+  if (!room) return "Kampus Thehok";
+
+  // 1. Prioritaskan jika ada data jadwal aktual yang memuat kampus untuk ruangan ini
   if (items && items.length > 0) {
     const itemWithCampus = items.find(
       (i) => i.ruangan?.trim().toLowerCase() === room.trim().toLowerCase() && i.kampus
@@ -191,20 +194,53 @@ export function getCampusForRoom(room: string, items?: JadwalItem[]): string {
     }
   }
 
-  const lower = room.toLowerCase();
+  const trimmed = room.trim();
+  const lower = trimmed.toLowerCase();
+
+  // 2. Ruangan Gedung Pascasarjana / S2 selalu berada di Kampus Thehok
   if (
-    lower.includes("kobar") ||
-    lower.includes("1.3") ||
-    lower.includes("1.5") ||
-    lower.includes("1.6") ||
-    lower.includes("1.7") ||
-    lower.includes("1.8") ||
-    lower.includes("1.9") ||
-    lower.includes("2.3") ||
-    lower.includes("3.1")
+    lower.includes("pasca") ||
+    lower.includes("s2") ||
+    lower.includes("b1.") ||
+    lower.includes("b2.") ||
+    lower.includes("b3.") ||
+    lower.includes("thehok") ||
+    lower.includes("cisco")
+  ) {
+    return "Kampus Thehok";
+  }
+
+  // 3. Eksplisit keyword "kobar"
+  if (lower.includes("kobar")) {
+    return "Kampus Kobar";
+  }
+
+  // 4. Laboratorium Kampus Kobar (Labor 1.5, 1.6, 1.7, 1.8, 1.9)
+  if (
+    lower.includes("labor 1.5") ||
+    lower.includes("labor 1.6") ||
+    lower.includes("labor 1.7") ||
+    lower.includes("labor 1.8") ||
+    lower.includes("labor 1.9") ||
+    lower.includes("lab 1.5") ||
+    lower.includes("lab 1.6") ||
+    lower.includes("lab 1.7") ||
+    lower.includes("lab 1.8") ||
+    lower.includes("lab 1.9")
   ) {
     return "Kampus Kobar";
   }
+
+  // 5. Ruangan Teori Kampus Kobar (R. 2.2, R. 2.3, R. 2.11 - R. 2.18)
+  // Dicocokkan secara presisi agar tidak salah mencocokkan Lab B2.3 atau Labor 2.3 Thehok
+  if (
+    /(?:^|[^a-z0-9])r\.?\s*2\.(?:2|3|1[1-8])\b/i.test(lower) ||
+    /(?:^|[^a-z0-9])ruang(?:an)?\s*2\.(?:2|3|1[1-8])\b/i.test(lower)
+  ) {
+    return "Kampus Kobar";
+  }
+
+  // Default ke Kampus Thehok (kampus utama)
   return "Kampus Thehok";
 }
 
