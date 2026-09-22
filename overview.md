@@ -124,50 +124,40 @@ flowchart TD
 
 ```mermaid
 sequenceDiagram
-    participant BAAK as Portal BAAK
     participant SCR as Scrapper
+    participant BAAK as Portal BAAK
     participant DB as PostgreSQL
     participant API as ElysiaJS
     participant REDIS as Redis
     participant WEB as Frontend
-    participant USER as Browser
 
-    rect rgb(240, 248, 255)
-    Note over SCR,DB: Data Ingestion Flow
-    SCR->>BAAK: HTTP GET - HTML Scraping
+    Note over SCR,DB: Data Ingestion
+    SCR->>BAAK: HTTP GET HTML
     BAAK-->>SCR: HTML Response
-    SCR->>SCR: Parse HTML via Cheerio
-    SCR->>SCR: Dedup dan Merge
-    SCR->>DB: Batch Upsert via Drizzle
-    SCR->>API: POST /api/cache/clear
+    SCR->>SCR: Parse dan Dedup
+    SCR->>DB: Batch Upsert
+    SCR->>API: Clear Cache
+
+    Note over WEB,DB: Runtime Request
+    WEB->>API: GET /api/jadwal
+    API->>API: Cek L1 RAM
+
+    alt L1 HIT
+        API-->>WEB: dari L1 Memory
+    else L1 MISS, cek L2
+        API->>REDIS: GET cache key
+        alt L2 HIT
+            REDIS-->>API: Data dari Redis
+        else L2 MISS
+            API->>DB: SELECT query
+            DB-->>API: Result Set
+            API->>REDIS: SET cache TTL 24h
+        end
+        API-->>WEB: Response JSON
     end
 
-    rect rgb(245, 255, 245)
-    Note over USER,REDIS: Runtime Data Flow
-    USER->>WEB: Buka Dashboard
-    WEB->>API: GET /api/jadwal?all=true
-    API->>API: Cek L1 RAM Cache
-    end
-
-    alt Cache L1 HIT
-        API-->>WEB: Response dari l1-memory
-    else Cache L1 MISS
-        API->>REDIS: GET jadwal:all_v1
-    end
-
-    alt Cache L2 HIT
-        REDIS-->>API: Cached Data
-        API-->>WEB: Response dari l2-redis
-    else Cache L2 MISS
-        API->>DB: SELECT via Drizzle ORM
-        DB-->>API: Result Set
-        API->>REDIS: SET jadwal:all_v1 TTL 24h
-        API-->>WEB: Response dari database
-    end
-
-    WEB->>WEB: Simpan ke Zustand Store
-    USER->>WEB: Filter / Search / Paginate
-    WEB->>WEB: In-Memory Processing
+    WEB->>WEB: Simpan di Zustand
+    Note over WEB: Filter dan paginate lokal
 ```
 
 ### 4.2. Protokol & Integrasi
