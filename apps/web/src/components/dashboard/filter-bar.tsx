@@ -58,10 +58,13 @@ export function FilterBar({
   // Sync hanya jika filters.search direset/diubah dari luar (misal: tombol reset)
   React.useEffect(() => {
     const externalSearch = filters.search || "";
-    if (externalSearch !== searchValue) {
-      isUserTypingRef.current = false;
-      setSearchValue(externalSearch);
-    }
+    setSearchValue((prev) => {
+      if (externalSearch !== prev) {
+        isUserTypingRef.current = false;
+        return externalSearch;
+      }
+      return prev;
+    });
   }, [filters.search]);
 
   // Eksekusi filter search HANYA jika dipicu oleh ketikan user (debounced 400ms)

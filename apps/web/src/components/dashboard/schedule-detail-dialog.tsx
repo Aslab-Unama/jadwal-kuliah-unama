@@ -21,8 +21,6 @@ import {
   Clock,
   Copy,
   DoorOpen,
-  GraduationCap,
-  Layers,
   User,
 } from "lucide-react";
 import { cn } from "cn";

@@ -23,8 +23,8 @@ import {
 } from "lucide-react";
 
 import { useTheme } from "next-themes";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Field,
   FieldDescription,
@@ -117,13 +117,13 @@ export function LoginForm({
         <FieldGroup>
           {/* Top Bar: Back & Theme Toggle */}
           <div className="flex items-center justify-between w-full pb-1">
-            <a
+            <Link
               href="/"
               className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
               <ArrowLeft className="size-3.5" />
               <span>Kembali</span>
-            </a>
+            </Link>
             <Button
               variant="outline"
               size="icon-xs"
@@ -140,7 +140,7 @@ export function LoginForm({
 
           {/* Header Brand & Identity */}
           <div className="flex flex-col items-center gap-3 text-center">
-            <a
+            <Link
               href="/"
               className="flex flex-col items-center gap-2 font-medium focus:outline-none"
               tabIndex={-1}
@@ -157,7 +157,7 @@ export function LoginForm({
                 />
               </div>
               <span className="sr-only">UNAMA</span>
-            </a>
+            </Link>
 
             <div className="space-y-1">
               <div className="flex items-center justify-center gap-2">
@@ -261,13 +261,13 @@ export function LoginForm({
 
           {/* Back Navigation */}
           <div className="pt-2 text-center">
-            <a
+            <Link
               href="/"
               className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
               <ArrowLeft className="size-3.5" />
               <span>Kembali ke Jadwal Kuliah</span>
-            </a>
+            </Link>
           </div>
         </FieldGroup>
       </form>

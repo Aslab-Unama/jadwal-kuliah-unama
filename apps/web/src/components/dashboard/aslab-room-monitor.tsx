@@ -289,6 +289,8 @@ export function AslabRoomMonitor({
   const containerRef = React.useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = React.useState<boolean>(false);
   const [selectedRoomForModal, setSelectedRoomForModal] = React.useState<RoomGridItem | null>(null);
+  const [modalPage, setModalPage] = React.useState<number>(1);
+  const [modalLimit, setModalLimit] = React.useState<number>(12);
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -558,7 +560,10 @@ export function AslabRoomMonitor({
       <button
         key={`${room.kampus}-${room.ruangan}`}
         type="button"
-        onClick={() => setSelectedRoomForModal(room)}
+        onClick={() => {
+          setSelectedRoomForModal(room);
+          setModalPage(1);
+        }}
         className={cn(
           "group relative flex flex-col items-center justify-center p-3 rounded-none text-center transition-all cursor-pointer shadow-xs min-h-[74px]",
           "hover:opacity-95 hover:shadow-md hover:scale-[1.01] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
@@ -685,22 +690,26 @@ export function AslabRoomMonitor({
             </button>
           ))}
 
-          <div className="h-4 w-px bg-border mx-0.5 hidden sm:block" />
+          {/* Toggle Khusus Lab vs Semua Ruangan (hanya tampil di tab Terpakai dan Jeda Kosong, disembunyikan di Matriks Ruangan) */}
+          {activeTab !== "matriks" && (
+            <>
+              <div className="h-4 w-px bg-border mx-0.5 hidden sm:block" />
 
-          {/* Toggle Khusus Lab vs Semua Ruangan */}
-          <button
-            type="button"
-            onClick={() => setFilterType(filterType === "lab_only" ? "all" : "lab_only")}
-            className={cn(
-              "px-2 sm:px-2.5 py-1 text-xs border transition-colors cursor-pointer flex items-center gap-1 rounded-none",
-              filterType === "lab_only"
-                ? "border-primary/60 bg-primary/10 text-primary font-medium"
-                : "border-border bg-background text-muted-foreground hover:bg-muted"
-            )}
-          >
-            <Layers className="size-3" />
-            {filterType === "lab_only" ? "Khusus Lab" : "Semua Ruangan"}
-          </button>
+              <button
+                type="button"
+                onClick={() => setFilterType(filterType === "lab_only" ? "all" : "lab_only")}
+                className={cn(
+                  "px-2 sm:px-2.5 py-1 text-xs border transition-colors cursor-pointer flex items-center gap-1 rounded-none",
+                  filterType === "lab_only"
+                    ? "border-primary/60 bg-primary/10 text-primary font-medium"
+                    : "border-border bg-background text-muted-foreground hover:bg-muted"
+                )}
+              >
+                <Layers className="size-3" />
+                {filterType === "lab_only" ? "Khusus Lab" : "Semua Ruangan"}
+              </button>
+            </>
+          )}
         </div>
 
         {/* Input Pencarian Ruangan dengan tombol reset */}
@@ -1453,7 +1462,6 @@ export function AslabRoomMonitor({
       {/* Modal Dialog Detail Jadwal Ruangan Terpilih (Sesuai Style Bawaan globals.css) */}
       <Dialog open={!!selectedRoomForModal} onOpenChange={(open) => !open && setSelectedRoomForModal(null)}>
         <DialogContent
-          container={isFullscreen ? containerRef.current : undefined}
           className="w-full sm:max-w-2xl md:max-w-3xl max-h-[88vh] overflow-y-auto p-4 sm:p-6 text-sm rounded-none border border-border bg-card"
         >
           <DialogHeader className="pb-3 border-b border-border">
@@ -1500,31 +1508,41 @@ export function AslabRoomMonitor({
                 </p>
               </div>
             ) : (() => {
-              const sortedModalClasses = [...selectedRoomForModal.classes].sort(
-                (a, b) => timeToMinutes(a.waktuMulai) - timeToMinutes(b.waktuMulai)
-              );
+              const sortedModalClasses = [...selectedRoomForModal.classes].sort((a, b) => {
+                if (a.tanggal && b.tanggal && a.tanggal !== b.tanggal) {
+                  return a.tanggal.localeCompare(b.tanggal);
+                }
+                return timeToMinutes(a.waktuMulai) - timeToMinutes(b.waktuMulai);
+              });
 
               const firstStart = sortedModalClasses.length > 0 ? timeToMinutes(sortedModalClasses[0].waktuMulai) : 0;
               const lastEnd = sortedModalClasses.length > 0 ? timeToMinutes(sortedModalClasses[sortedModalClasses.length - 1].waktuMulai) + 100 : 0;
               const isRoomTerjadwal = currentMins < firstStart;
               const isRoomSelesai = currentMins >= lastEnd;
 
+              const totalModalItems = sortedModalClasses.length;
+              const totalModalPages = Math.max(1, Math.ceil(totalModalItems / modalLimit));
+              const offset = (modalPage - 1) * modalLimit;
+              const paginatedModalClasses = sortedModalClasses.slice(offset, offset + modalLimit);
+
               return (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                     <span>Daftar Sesi Perkuliahan</span>
                     <span className="font-mono text-primary font-bold">
-                      {sortedModalClasses.length} Sesi Terjadwal
+                      {totalModalItems} Sesi Terjadwal
                     </span>
                   </div>
 
                   <div className="grid grid-cols-1 gap-2.5">
-                    {sortedModalClasses.map((cls, idx) => {
-                      const prevCls = idx > 0 ? sortedModalClasses[idx - 1] : null;
+                    {paginatedModalClasses.map((cls, idx) => {
+                      const absoluteIdx = offset + idx;
+                      const prevCls = absoluteIdx > 0 ? sortedModalClasses[absoluteIdx - 1] : null;
+                      const isSameDay = !prevCls?.tanggal || !cls.tanggal || prevCls.tanggal === cls.tanggal;
                       const prevStart = prevCls ? timeToMinutes(prevCls.waktuMulai) : 0;
                       const prevEnd = prevStart + 100;
                       const curStart = timeToMinutes(cls.waktuMulai);
-                      const gapMinutes = prevCls ? curStart - prevEnd : 0;
+                      const gapMinutes = prevCls && isSameDay ? curStart - prevEnd : 0;
                       const isCurrentBreak =
                         gapMinutes > 0 && currentMins >= prevEnd && currentMins < curStart;
 
@@ -1533,8 +1551,8 @@ export function AslabRoomMonitor({
                       const isPhysical = isPhysicalClass(cls.status, cls.ruangan);
                       const isLive = isPhysical && currentMins >= startMins && currentMins < endMins;
 
-                      const isTopTerjadwal = isRoomTerjadwal && idx === 0;
-                      const isBottomSelesai = isRoomSelesai && idx === sortedModalClasses.length - 1;
+                      const isTopTerjadwal = isRoomTerjadwal && absoluteIdx === 0;
+                      const isBottomSelesai = isRoomSelesai && absoluteIdx === sortedModalClasses.length - 1;
 
                       let cardStyle = "border border-border bg-card hover:border-primary/60 hover:bg-muted/30";
                       if (isLive) {
@@ -1547,7 +1565,7 @@ export function AslabRoomMonitor({
 
                       return (
                         <React.Fragment key={cls.id}>
-                          {/* Jeda di Antara 2 Matkul (HANYA 1 jika sedang jeda saat ini) */}
+                          {/* Jeda di Antara 2 Matkul (HANYA jika pada hari yang sama dan sedang jeda saat ini) */}
                           {isCurrentBreak && (
                             <div
                               className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 p-3 rounded-none transition-all border-2 border-amber-500 bg-amber-500/10 dark:bg-amber-950/20 text-foreground ring-1 ring-amber-500/50 shadow-xs"
@@ -1603,13 +1621,18 @@ export function AslabRoomMonitor({
                               onSelectItem && "cursor-pointer"
                             )}
                           >
-                            {/* Baris Atas: Jam, Kode Kelas, Status, Penanda Status */}
+                            {/* Baris Atas: Jam, Tanggal (jika multi-tanggal), Kode Kelas, Status, Penanda Status */}
                             <div className="flex flex-wrap items-center justify-between gap-2">
                               <div className="flex flex-wrap items-center gap-2">
                                 <div className="flex items-center gap-1.5 font-mono text-xs sm:text-sm font-bold text-foreground bg-muted/60 px-2.5 py-1 border border-border rounded-none">
                                   <Clock className="size-3.5 text-primary shrink-0" />
                                   <span>{cls.waktuMulai} WIB</span>
                                 </div>
+                                {(!selectedDate || cls.hari) && (
+                                  <div className="font-mono text-xs font-medium px-2 py-1 bg-muted/70 text-muted-foreground border border-border rounded-none">
+                                    {cls.hari}{cls.tanggal ? `, ${cls.tanggal}` : ""}
+                                  </div>
+                                )}
                                 <div className="font-mono text-xs sm:text-sm font-bold px-2.5 py-1 bg-primary/10 text-primary border border-primary/30 rounded-none">
                                   {cls.kodeKelas}
                                 </div>
@@ -1653,6 +1676,23 @@ export function AslabRoomMonitor({
                       );
                     })}
                   </div>
+
+                  {/* Pagination Controls untuk Modal Detail Ruangan */}
+                  {totalModalItems > modalLimit && (
+                    <div className="pt-2 border-t border-border">
+                      <PaginationControls
+                        currentPage={modalPage}
+                        totalPages={totalModalPages}
+                        totalItems={totalModalItems}
+                        limit={modalLimit}
+                        onPageChange={setModalPage}
+                        onLimitChange={(l) => {
+                          setModalLimit(l);
+                          setModalPage(1);
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
               );
             })()}

@@ -16,7 +16,7 @@ import Image from "next/image";
 import { useTheme } from "next-themes";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CalendarDays, Clock, Lock, LogOut, Moon, RefreshCw, Sun } from "lucide-react";
+import { Clock, Lock, LogOut, Moon, RefreshCw, Sun } from "lucide-react";
 
 interface HeaderProps {
   onRefresh?: () => void;
