@@ -75,12 +75,12 @@ export function DateSelector({
       <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
         <PopoverTrigger className="inline-flex items-center gap-1.5 h-7 px-2 sm:px-2.5 border border-border bg-background text-foreground text-xs font-medium hover:bg-muted/40 transition-colors cursor-pointer select-none rounded-none shadow-2xs max-w-[150px] sm:max-w-none">
           <CalendarIcon className="size-3.5 text-primary shrink-0" />
-          <span className="truncate hidden sm:inline">
+          <span className="truncate hidden sm:inline" suppressHydrationWarning>
             {selectedDate
               ? format(selectedDate, "EEEE, dd MMMM yyyy", { locale: localeId })
               : "Semua Tanggal"}
           </span>
-          <span className="truncate sm:hidden">
+          <span className="truncate sm:hidden" suppressHydrationWarning>
             {selectedDate
               ? format(selectedDate, "dd MMM yyyy", { locale: localeId })
               : "Semua Tanggal"}

@@ -64,6 +64,13 @@ export interface JadwalFilters {
   limit?: number;
 }
 
+export function getTodayWib(): Date {
+  const now = new Date();
+  const wibDateStr = now.toLocaleDateString("en-CA", { timeZone: "Asia/Jakarta" });
+  const [year, month, day] = wibDateStr.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
 export function formatDateDb(date: Date): string {
   return format(date, "dd MMMM yyyy", { locale: localeId });
 }

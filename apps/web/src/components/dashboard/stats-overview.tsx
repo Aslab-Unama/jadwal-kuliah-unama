@@ -119,7 +119,10 @@ export function StatsOverview({
               </span>
             </div>
 
-            <p className="text-[10.5px] sm:text-[11px] text-muted-foreground font-medium line-clamp-2 leading-tight min-h-[26px]">
+            <p
+              className="text-[10.5px] sm:text-[11px] text-muted-foreground font-medium line-clamp-2 leading-tight min-h-[26px]"
+              suppressHydrationWarning
+            >
               {item.desc}
             </p>
           </div>

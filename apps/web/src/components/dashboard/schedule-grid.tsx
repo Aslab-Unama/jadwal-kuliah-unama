@@ -122,7 +122,7 @@ export function ScheduleGrid({
         {/* Info Tanggal / Status di Sisi Kanan Header */}
         <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/40 px-3 py-1.5 border border-border/60 self-start sm:self-center font-medium">
           <Calendar className="size-3.5 text-primary shrink-0" />
-          <span>
+          <span suppressHydrationWarning>
             {selectedDate
               ? format(selectedDate, "EEEE, dd MMMM yyyy", { locale: localeId })
               : "Semua Jadwal Perkuliahan"}

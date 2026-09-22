@@ -5,6 +5,7 @@ import {
   JadwalItem,
   JadwalSummaryData,
   formatDateDb,
+  getTodayWib,
 } from "@/lib/types";
 import { fetchJadwalList } from "@/lib/api";
 
@@ -56,13 +57,15 @@ const DEFAULT_FILTERS: JadwalFilters = {
   limit: DEFAULT_LIMIT,
 };
 
-export const useJadwalStore = create<JadwalStoreState>((set, get) => ({
-  allSchedules: [],
-  selectedDate: new Date(),
-  filters: {
-    ...DEFAULT_FILTERS,
-    tanggal: formatDateDb(new Date()),
-  },
+export const useJadwalStore = create<JadwalStoreState>((set, get) => {
+  const initialDate = getTodayWib();
+  return {
+    allSchedules: [],
+    selectedDate: initialDate,
+    filters: {
+      ...DEFAULT_FILTERS,
+      tanggal: formatDateDb(initialDate),
+    },
   viewMode: "grid",
   selectedItem: null,
   isLoading: true,
@@ -350,7 +353,8 @@ export const useJadwalStore = create<JadwalStoreState>((set, get) => ({
       ruanganList,
     };
   },
-}));
+};
+});
 
 /**
  * Hook reaktif untuk mendapatkan item jadwal mentah tanggal aktif (untuk Aslab monitor)
