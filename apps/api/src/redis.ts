@@ -20,7 +20,7 @@ try {
 export const redis = redisClient;
 
 export const CACHE_KEYS = {
-  ALL_JADWAL: 'jadwal:all_v1',
+  ALL_JADWAL: 'jadwal:all_2026_ganjil',
 };
 
 // Cache TTL

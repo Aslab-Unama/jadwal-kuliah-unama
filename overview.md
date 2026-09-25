@@ -337,7 +337,7 @@ Sistem menggunakan satu tabel utama `jadwal_lab_2025_genap` di PostgreSQL:
 ### Asumsi
 
 1. **Durasi perkuliahan** diasumsikan 100 menit per sesi berdasarkan standar 2 SKS. Kode sumber menggunakan *hardcoded value* ini di seluruh kalkulasi gap dan progress.
-2. **Semester aktif** — nama tabel `jadwal_lab_2025_genap` mengindikasikan data semester genap 2025/2026. Diasumsikan tabel baru akan dibuat untuk semester berikutnya (belum ada mekanisme migrasi otomatis).
+2. **Semester aktif** — tabel aktif saat ini adalah `jadwal_lab_2026_ganjil` (Semester Ganjil 2026/2027). Data semester lama tetap tersimpan di tabel `jadwal_lab_2025_genap` sebagai arsip historis.
 3. **Deployment frontend** — Dockerfile hanya men-deploy API backend. Frontend Next.js diasumsikan di-deploy secara terpisah (kemungkinan via Vercel, berdasarkan `web/README.md` yang menyebutkan "Deploy on Vercel").
 4. **Upstash Redis** — kredensial (`UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`) tidak ada di `.env.example`. Jika tidak dikonfigurasi, sistem tetap berfungsi tanpa caching L2 (degradasi *graceful*).
 
