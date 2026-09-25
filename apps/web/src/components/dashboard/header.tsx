@@ -87,7 +87,7 @@ export function Header({ onRefresh, isRefreshing }: HeaderProps) {
                 Jadwal Kuliah UNAMA
               </h1>
               <Badge variant="outline" className="hidden sm:inline-flex text-[11px] font-normal shrink-0">
-                Genap 2025/2026
+                Ganjil 2026/2027
               </Badge>
               {isAslab && (
                 <Badge variant="default" className="hidden sm:inline-flex text-[10px] font-normal bg-emerald-600 text-white shrink-0">

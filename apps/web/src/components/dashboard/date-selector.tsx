@@ -94,7 +94,7 @@ export function DateSelector({
           <Calendar
             mode="single"
             selected={selectedDate || undefined}
-            defaultMonth={selectedDate || new Date(2026, 3, 13)}
+            defaultMonth={selectedDate || new Date()}
             onSelect={handleDateSelect}
             locale={localeId}
             className="rounded-none border border-border bg-background p-1"

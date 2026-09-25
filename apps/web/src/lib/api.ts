@@ -3,10 +3,10 @@ import { JadwalApiResponse, JadwalFilters, JadwalItem, JadwalSummaryData, Jadwal
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 const FALLBACK_SUMMARY: JadwalSummaryData = {
-  totalJadwal: 11063,
-  totalTatapMuka: 8992,
-  totalOnline: 1578,
-  totalCancel: 493,
+  totalJadwal: 13906,
+  totalTatapMuka: 13893,
+  totalOnline: 0,
+  totalCancel: 13,
   kampusList: ["Kampus Thehok", "Kampus Kobar"],
   ruanganList: [
     "Labor 1.3",
