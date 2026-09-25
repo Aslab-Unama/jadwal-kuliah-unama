@@ -1,7 +1,7 @@
 import * as cheerio from 'cheerio';
 import type { ScrapedScheduleItem, ScrapePageResult } from './types';
 
-const BASE_URL = 'https://baak.unama.ac.id/jadwal-kuliah';
+const BASE_URL = process.env.BAAK_URL || 'https://baak.unama.ac.id/jadwal-kuliah';
 
 /**
  * Scrape satu halaman jadwal perkuliahan dari BAAK UNAMA

@@ -69,20 +69,36 @@ async function main() {
 
     let totalSynced = 0;
 
-    for (let page = 1; page <= maxPages; page++) {
-      process.stdout.write(`⏳ Scraping halaman ${page}/${maxPages}... `);
-      try {
-        const pageData = page === 1 ? firstPage : await scrapeLabSchedulePage(page, ruangFilter);
-        const count = await syncScheduleToDatabase(pageData.items);
-        totalSynced += count;
-        console.log(`✅ Berhasil sync ${count} baris.`);
-      } catch (err: any) {
-        console.error(`❌ Error di halaman ${page}:`, err);
+    const BATCH_SIZE = 3;
+    for (let i = 1; i <= maxPages; i += BATCH_SIZE) {
+      const pageBatch = [];
+      for (let p = i; p < i + BATCH_SIZE && p <= maxPages; p++) {
+        pageBatch.push(p);
       }
 
-      // Beri jeda 300ms antar halaman agar ramah server BAAK
-      if (page < maxPages) {
-        await new Promise((r) => setTimeout(r, 300));
+      const results = await Promise.all(
+        pageBatch.map(async (page) => {
+          try {
+            const pageData = page === 1 ? firstPage : await scrapeLabSchedulePage(page, ruangFilter);
+            return { page, items: pageData.items, error: null };
+          } catch (err: any) {
+            return { page, items: [], error: err };
+          }
+        })
+      );
+
+      for (const res of results) {
+        if (res.error) {
+          console.error(`❌ Error di halaman ${res.page}:`, res.error);
+        } else {
+          const count = await syncScheduleToDatabase(res.items);
+          totalSynced += count;
+          console.log(`✅ Halaman ${res.page}/${maxPages}: sync ${count} baris.`);
+        }
+      }
+
+      if (i + BATCH_SIZE <= maxPages) {
+        await new Promise((r) => setTimeout(r, 200));
       }
     }
 

@@ -1,0 +1,53 @@
+name: Sync Jadwal BAAK
+run-name: Sinkronisasi Jadwal BAAK UNAMA oleh @${{ github.actor }}
+
+on:
+  # Tombol manual di tab Actions GitHub (bisa dipicu kapan saja)
+  workflow_dispatch:
+    inputs:
+      filter_ruang:
+        description: 'Filter Kelas yang Ingin Di-sync'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - labor
+
+  # Opsional: Jadwal otomatis mingguan (setiap Senin pukul 05:00 WIB / 22:00 UTC Minggu)
+  schedule:
+    - cron: '0 22 * * 0'
+
+jobs:
+  scrape-and-sync:
+    name: Scrape & Upsert ke Supabase
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🥟 Setup Bun Runtime
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: 📦 Install Dependencies
+        run: bun install --frozen-lockfile
+
+      - name: 🚀 Jalankan Scrapper Sync
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
+          BAAK_URL: ${{ secrets.BAAK_URL }}
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+        run: |
+          if [ "${{ github.event.inputs.filter_ruang }}" = "labor" ]; then
+            echo "Memulai sinkronisasi khusus kelas Laboratorium..."
+            bun apps/scrapper/src/index.ts --sync --labor
+          else
+            echo "Memulai sinkronisasi semua kelas..."
+            bun apps/scrapper/src/index.ts --sync
+          fi
