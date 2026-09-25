@@ -9,8 +9,13 @@ const BASE_URL = process.env.BAAK_URL || 'https://baak.unama.ac.id/jadwal-kuliah
  * @param ruang Filter ruang kelas ('', 'labor', 'teori'. Default: '' untuk semua kelas)
  */
 export async function scrapeLabSchedulePage(page = 1, ruang = ''): Promise<ScrapePageResult> {
-  const ruangParam = ruang ? `&ruang=${encodeURIComponent(ruang)}` : '';
-  const url = `${BASE_URL}?search=1${ruangParam}&page=${page}`;
+  const targetUrl = new URL(BASE_URL);
+  targetUrl.searchParams.set('search', '1');
+  if (ruang) {
+    targetUrl.searchParams.set('ruang', ruang);
+  }
+  targetUrl.searchParams.set('page', page.toString());
+  const url = targetUrl.toString();
 
   let res: Response | null = null;
   let lastError: any = null;
