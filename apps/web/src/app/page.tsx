@@ -146,11 +146,15 @@ export default function HomePage() {
       {/* Public Footer */}
       <footer className="mt-auto border-t border-border/80 bg-muted/20 py-6 text-xs text-muted-foreground">
         <div className="mx-auto flex max-w-7xl flex-col sm:flex-row items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
-          <div>
-            <p className="font-medium text-foreground">Universitas Dinamika Bangsa (UNAMA)</p>
-            <p className="text-[11px] mt-0.5">Portal Publik Jadwal Kuliah & Laboratorium Komputer</p>
+          <div className="text-center sm:text-left">
+            <p className="font-medium text-foreground">
+              Dikembangkan oleh Asisten Laboratorium Komputer UNAMA
+            </p>
+            <p className="text-[11px] mt-0.5 text-muted-foreground">
+              Universitas Dinamika Bangsa &bull; Portal Jadwal Perkuliahan &amp; Praktikum Laboratorium
+            </p>
           </div>
-          <div className="text-[11px] text-center sm:text-right">
+          <div className="text-[11px] text-center sm:text-right text-muted-foreground">
             <p>Data diperbarui secara berkala dari Sistem Informasi Akademik.</p>
             <p className="text-muted-foreground/80 mt-0.5">Semua data waktu ditampilkan dalam Waktu Indonesia Barat (WIB).</p>
           </div>
