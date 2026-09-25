@@ -70,7 +70,7 @@ export function ScheduleDetailDialog({ item, onClose }: ScheduleDetailDialogProp
       <DialogContent className="sm:max-w-lg p-6 rounded-none border border-border bg-card">
         {item && (
           <div className="space-y-5">
-            <DialogHeader className="space-y-2 text-left pb-3 border-b border-border">
+            <DialogHeader className="space-y-2 text-left pb-3 border-b border-border pr-9">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge variant="outline" className="font-mono text-xs font-semibold px-2 py-0.5 rounded-none">

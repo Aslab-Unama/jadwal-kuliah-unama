@@ -167,11 +167,12 @@ export const useJadwalStore = create<JadwalStoreState>((set, get) => {
   },
 
   resetFilters: () => {
+    const today = getTodayWib();
     set({
-      selectedDate: null,
+      selectedDate: today,
       filters: {
         ...DEFAULT_FILTERS,
-        tanggal: undefined,
+        tanggal: formatDateDb(today),
       },
     });
   },

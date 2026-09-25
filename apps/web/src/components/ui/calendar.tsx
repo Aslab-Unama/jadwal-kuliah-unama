@@ -56,12 +56,12 @@ function Calendar({
         ),
         button_previous: cn(
           buttonVariants({ variant: buttonVariant }),
-          "size-7 p-0 select-none aria-disabled:opacity-50",
+          "size-7 p-0 select-none aria-disabled:opacity-50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus:outline-none",
           defaultClassNames.button_previous
         ),
         button_next: cn(
           buttonVariants({ variant: buttonVariant }),
-          "size-7 p-0 select-none aria-disabled:opacity-50",
+          "size-7 p-0 select-none aria-disabled:opacity-50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus:outline-none",
           defaultClassNames.button_next
         ),
         month_caption: cn(
@@ -87,13 +87,13 @@ function Calendar({
             : "flex items-center gap-1 text-xs [&>svg]:size-3 [&>svg]:text-muted-foreground",
           defaultClassNames.caption_label
         ),
-        month_grid: cn("w-fit border-collapse", defaultClassNames.month_grid),
-        weekdays: cn("flex gap-0.5", defaultClassNames.weekdays),
+        month_grid: cn("w-fit border-collapse select-none", defaultClassNames.month_grid),
+        weekdays: cn("flex justify-between gap-0.5", defaultClassNames.weekdays),
         weekday: cn(
-          "size-7 flex items-center justify-center text-[11px] font-normal text-muted-foreground select-none",
+          "size-7 shrink-0 flex items-center justify-center text-[11px] font-normal text-muted-foreground select-none",
           defaultClassNames.weekday
         ),
-        week: cn("mt-0.5 flex gap-0.5", defaultClassNames.week),
+        week: cn("mt-0.5 flex justify-between gap-0.5", defaultClassNames.week),
         week_number_header: cn(
           "w-7 select-none",
           defaultClassNames.week_number_header
@@ -103,7 +103,7 @@ function Calendar({
           defaultClassNames.week_number
         ),
         day: cn(
-          "group/day relative size-7 p-0 text-center select-none",
+          "group/day relative size-7 shrink-0 p-0 text-center select-none",
           defaultClassNames.day
         ),
         range_start: cn(
@@ -206,7 +206,7 @@ function CalendarDayButton({
       data-range-end={modifiers.range_end}
       data-range-middle={modifiers.range_middle}
       className={cn(
-        "relative isolate z-10 flex size-7 items-center justify-center border-0 p-0 text-xs font-normal leading-none transition-colors group-data-[focused=true]/day:relative group-data-[focused=true]/day:z-10 group-data-[focused=true]/day:border-ring group-data-[focused=true]/day:ring-[2px] group-data-[focused=true]/day:ring-ring/50 data-[range-end=true]:rounded-(--cell-radius) data-[range-end=true]:rounded-r-(--cell-radius) data-[range-end=true]:bg-primary data-[range-end=true]:text-primary-foreground data-[range-middle=true]:rounded-none data-[range-middle=true]:bg-muted data-[range-middle=true]:text-foreground data-[range-start=true]:rounded-(--cell-radius) data-[range-start=true]:rounded-l-(--cell-radius) data-[range-start=true]:bg-primary data-[range-start=true]:text-primary-foreground data-[selected-single=true]:bg-primary data-[selected-single=true]:text-primary-foreground dark:hover:text-foreground",
+        "relative isolate z-10 flex size-7 shrink-0 items-center justify-center border-0 p-0 text-xs font-normal tabular-nums leading-none transition-colors group-data-[focused=true]/day:relative group-data-[focused=true]/day:z-10 group-data-[focused=true]/day:border-ring group-data-[focused=true]/day:ring-[2px] group-data-[focused=true]/day:ring-ring/50 data-[range-end=true]:rounded-(--cell-radius) data-[range-end=true]:rounded-r-(--cell-radius) data-[range-end=true]:bg-primary data-[range-end=true]:text-primary-foreground data-[range-middle=true]:rounded-none data-[range-middle=true]:bg-muted data-[range-middle=true]:text-foreground data-[range-start=true]:rounded-(--cell-radius) data-[range-start=true]:rounded-l-(--cell-radius) data-[range-start=true]:bg-primary data-[range-start=true]:text-primary-foreground data-[selected-single=true]:bg-primary data-[selected-single=true]:text-primary-foreground dark:hover:text-foreground",
         defaultClassNames.day,
         className
       )}

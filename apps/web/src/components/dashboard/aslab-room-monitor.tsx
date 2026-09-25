@@ -46,6 +46,7 @@ import {
   formatDuration,
   getCampusForRoom,
   isLabRoom,
+  normalizeCampus,
   UNAMA_LABS,
 } from "@/lib/lab-utils";
 import { JadwalItem, formatDosenName, formatDateDb } from "@/lib/types";
@@ -55,6 +56,7 @@ import {
   isDateToday,
   isDatePast,
   isDateFuture,
+  parseDateFromDbString,
 } from "@/lib/time-sync";
 
 /**
@@ -217,7 +219,7 @@ const MASTER_ROOMS: MasterRoomDefinition[] = [
 
 function matchesRoom(item: JadwalItem, room: MasterRoomDefinition): boolean {
   if (!item.ruangan) return false;
-  if (item.kampus && item.kampus !== room.kampus) return false;
+  if (item.kampus && normalizeCampus(item.kampus) !== room.kampus) return false;
 
   const itemNorm = formatRoomDisplayName(item.ruangan).trim().toLowerCase();
   const roomNorm = room.displayName.trim().toLowerCase();
@@ -653,6 +655,7 @@ export function AslabRoomMonitor({
               key={kp}
               type="button"
               onClick={() => setSelectedKampus(kp)}
+              aria-pressed={selectedKampus === kp}
               className={cn(
                 "px-2 sm:px-2.5 py-1 text-xs border transition-colors cursor-pointer rounded-none",
                 selectedKampus === kp
@@ -1018,7 +1021,7 @@ export function AslabRoomMonitor({
               </p>
             </div>
             <span className="font-mono text-[11px] shrink-0 font-medium">
-              Kobar: s/d 17:00 WIB • Thehok: s/d Selesai
+              Kobar: hingga 17:00 WIB • Thehok: hingga selesai
             </span>
           </div>
 
@@ -1326,7 +1329,7 @@ export function AslabRoomMonitor({
                 className="h-8 gap-1.5 cursor-pointer text-xs rounded-none border-border hover:bg-muted font-medium"
               >
                 {isFullscreen ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}
-                <span>{isFullscreen ? "Exit Full Screen" : "Full Screen"}</span>
+                <span>{isFullscreen ? "Keluar Layar Penuh" : "Layar Penuh"}</span>
               </Button>
 
               <div className="h-4 w-px bg-border mx-1 hidden sm:block" />
@@ -1503,15 +1506,12 @@ export function AslabRoomMonitor({
             ) : (() => {
               const sortedModalClasses = [...selectedRoomForModal.classes].sort((a, b) => {
                 if (a.tanggal && b.tanggal && a.tanggal !== b.tanggal) {
-                  return a.tanggal.localeCompare(b.tanggal);
+                  const dateA = parseDateFromDbString(a.tanggal)?.getTime() ?? 0;
+                  const dateB = parseDateFromDbString(b.tanggal)?.getTime() ?? 0;
+                  if (dateA !== dateB) return dateA - dateB;
                 }
                 return timeToMinutes(a.waktuMulai) - timeToMinutes(b.waktuMulai);
               });
-
-              const firstStart = sortedModalClasses.length > 0 ? timeToMinutes(sortedModalClasses[0].waktuMulai) : 0;
-              const lastEnd = sortedModalClasses.length > 0 ? timeToMinutes(sortedModalClasses[sortedModalClasses.length - 1].waktuMulai) + 100 : 0;
-              const isRoomTerjadwal = currentMins < firstStart;
-              const isRoomSelesai = currentMins >= lastEnd;
 
               const totalModalItems = sortedModalClasses.length;
               const totalModalPages = Math.max(1, Math.ceil(totalModalItems / modalLimit));
@@ -1539,9 +1539,6 @@ export function AslabRoomMonitor({
                       const isCurrentBreak =
                         gapMinutes > 0 && currentMins >= prevEnd && currentMins < curStart;
 
-                      const startMins = timeToMinutes(cls.waktuMulai);
-                      const endMins = startMins + 100;
-                      const isPhysical = isPhysicalClass(cls.status, cls.ruangan);
                       const realtime = getRealtimeScheduleStatus(cls, currentMins);
 
                       let cardStyle = "border border-border bg-card hover:border-primary/60 hover:bg-muted/30";
@@ -1562,7 +1559,7 @@ export function AslabRoomMonitor({
                             >
                               <div className="flex items-center gap-2.5">
                                 <div className="p-1.5 rounded-none shrink-0 border bg-amber-500 text-black border-amber-500">
-                                  <Timer className="size-4" />
+                                   <Timer className="size-4" />
                                 </div>
                                 <div>
                                   <div className="flex items-center gap-2">
@@ -1575,13 +1572,13 @@ export function AslabRoomMonitor({
                                     </span>
                                   </div>
                                   <p className="text-[11px] font-mono text-muted-foreground mt-0.5">
-                                    {minutesToTime(prevEnd)} – {minutesToTime(curStart)} WIB ({formatDuration(gapMinutes)})
+                                    {minutesToTime(prevEnd)} - {minutesToTime(curStart)} WIB ({formatDuration(gapMinutes)})
                                   </p>
                                 </div>
                               </div>
 
                               <div className="self-start sm:self-center shrink-0">
-                                <span className="inline-flex items-center font-bold font-mono text-xs px-2.5 py-1 border rounded-none bg-amber-500 text-black border-amber-600 font-bold">
+                                <span className="inline-flex items-center font-mono text-xs px-2.5 py-1 border rounded-none bg-amber-500 text-black border-amber-600 font-bold">
                                   {gapMinutes} Menit Jeda
                                 </span>
                               </div>
@@ -1618,7 +1615,7 @@ export function AslabRoomMonitor({
                                   <Clock className="size-3.5 text-primary shrink-0" />
                                   <span>{cls.waktuMulai} WIB</span>
                                 </div>
-                                {(!selectedDate || cls.hari) && (
+                                {!selectedDate && (cls.hari || cls.tanggal) && (
                                   <div className="font-mono text-xs font-medium px-2 py-1 bg-muted/70 text-muted-foreground border border-border rounded-none">
                                     {cls.hari}{cls.tanggal ? `, ${cls.tanggal}` : ""}
                                   </div>
@@ -1630,11 +1627,6 @@ export function AslabRoomMonitor({
                                   <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-emerald-500 text-white font-mono text-[10px] sm:text-xs font-bold uppercase rounded-none">
                                     <span className="size-1.5 rounded-full bg-white animate-ping" />
                                     Sedang Digunakan
-                                  </span>
-                                )}
-                                {realtime.isUpcoming && (
-                                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-blue-500 text-white font-mono text-[10px] sm:text-xs font-bold uppercase rounded-none">
-                                    Terjadwal
                                   </span>
                                 )}
                                 {realtime.isPassed && (

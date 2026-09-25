@@ -127,37 +127,49 @@ export function FilterBar({
         )}
       </div>
 
-      {/* Date Selector (Left) & View Mode Switcher (Right) */}
-      <div className="flex flex-wrap items-center justify-between gap-2 py-0.5">
+      {/* Date Selector & View Mode Switcher */}
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3 py-0.5">
         {/* Unified Date Selector */}
         <DateSelector selectedDate={selectedDate} onDateChange={onDateChange} />
 
-        {/* View Toggle (Kartu / Tabel) */}
-        <div className="inline-flex border border-border p-0.5 bg-muted/40 shrink-0">
-          <Button
-            type="button"
-            variant={viewMode === "grid" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => onViewModeChange("grid")}
-            className="h-7 px-2 sm:px-2.5 gap-1.5 text-xs rounded-none"
-            aria-label="Tampilan Kartu Grid"
-            title="Tampilan Kartu Grid"
-          >
-            <LayoutGrid className="size-3.5" />
-            <span className="hidden sm:inline">Kartu</span>
-          </Button>
-          <Button
-            type="button"
-            variant={viewMode === "table" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => onViewModeChange("table")}
-            className="h-7 px-2 sm:px-2.5 gap-1.5 text-xs rounded-none"
-            aria-label="Tampilan Tabel"
-            title="Tampilan Tabel"
-          >
-            <TableIcon className="size-3.5" />
-            <span className="hidden sm:inline">Tabel</span>
-          </Button>
+        <div className="h-4 w-px bg-border mx-0.5 hidden sm:block" />
+
+        {/* View Toggle */}
+        <div className="inline-flex items-center gap-1.5 shrink-0">
+          <div className="inline-flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => onViewModeChange("grid")}
+              aria-pressed={viewMode === "grid"}
+              className={cn(
+                "h-7 px-2 sm:px-2.5 text-xs border transition-colors cursor-pointer rounded-none inline-flex items-center gap-1.5 select-none",
+                viewMode === "grid"
+                  ? "border-primary bg-primary text-primary-foreground font-medium"
+                  : "border-border bg-background hover:bg-muted text-muted-foreground"
+              )}
+              title="Tampilan Kartu Grid"
+              aria-label="Tampilan Kartu Grid"
+            >
+              <LayoutGrid className="size-3.5" />
+              <span>Kartu</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onViewModeChange("table")}
+              aria-pressed={viewMode === "table"}
+              className={cn(
+                "h-7 px-2 sm:px-2.5 text-xs border transition-colors cursor-pointer rounded-none inline-flex items-center gap-1.5 select-none",
+                viewMode === "table"
+                  ? "border-primary bg-primary text-primary-foreground font-medium"
+                  : "border-border bg-background hover:bg-muted text-muted-foreground"
+              )}
+              title="Tampilan Tabel"
+              aria-label="Tampilan Tabel"
+            >
+              <TableIcon className="size-3.5" />
+              <span>Tabel</span>
+            </button>
+          </div>
         </div>
       </div>
 

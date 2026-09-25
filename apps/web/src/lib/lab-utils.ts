@@ -1,5 +1,5 @@
 import { JadwalItem } from "./types";
-import { getGlobalMinutesWib } from "./time-sync";
+import { getGlobalMinutesWib, isDateToday } from "./time-sync";
 
 export interface LabGapClassRef {
   mataKuliah: string;
@@ -331,7 +331,8 @@ export function getInUseRooms(
     const waktuSelesai = minutesToTime(endMins);
 
     const isPhysical = isPhysicalClass(item.status, item.ruangan);
-    const isLive = isPhysical && currentMinutes >= startMins && currentMinutes < endMins;
+    const isToday = item.tanggal ? isDateToday(item.tanggal) : true;
+    const isLive = isPhysical && isToday && currentMinutes >= startMins && currentMinutes < endMins;
     const elapsed = Math.max(0, currentMinutes - startMins);
     const progress = Math.min(100, Math.max(0, Math.round((elapsed / 100) * 100)));
 
