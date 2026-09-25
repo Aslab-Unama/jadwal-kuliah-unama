@@ -2,6 +2,21 @@
 
 Semua perubahan pada proyek **Jadwal Kuliah UNAMA** dicatat dalam berkas ini. Format penulisan mengacu pada [Keep a Changelog](https://keepachangelog.com/id/1.1.0/) dan [Semantic Versioning](https://semver.org/).
 
+## [1.1.0] - 2026-09-26
+
+Pembaruan dependensi monorepo ke versi rilis terbaru di seluruh package.
+
+### Diubah
+- TypeScript dinaikkan dari `^5.8.2` ke `^7.0.2` pada semua workspace (`apps/web`, `apps/api`, `apps/scrapper`, `packages/db`).
+- Next.js dinaikkan dari `16.3.5` ke `16.3.6` pada `@jadwal/web`.
+- React dan React DOM dinaikkan dari `19.2.8` ke `19.3.0` pada `@jadwal/web`.
+- ESLint dinaikkan ke versi `^10` dan `eslint-config-next` ke `16.3.6`.
+- ElysiaJS dinaikkan dari `^1.2.25` ke `^1.4.30` dan `@elysiajs/cors` ke `^1.4.2` pada `@jadwal/api`.
+- Drizzle ORM dinaikkan dari `^0.40.0` ke `^0.45.3` dan `drizzle-kit` ke `^0.31.11` pada `packages/db`.
+- Cheerio dinaikkan dari `^1.0.0` ke `^1.2.0` pada `@jadwal/scrapper`.
+- Recharts dinaikkan dari `3.8.0` ke `3.10.1` dan Lucide React ke `^1.48.0` pada `@jadwal/web`.
+- Dotenv dinaikkan dari `^16.4.7` ke `^18.0.4` dan `@types/node` ke `^26.6.2`.
+
 ---
 
 ## [1.0.0] - 2026-09-26
@@ -51,4 +66,5 @@ Rilis awal platform Jadwal Kuliah dan Laboratorium Universitas Dinamika Bangsa (
 
 ---
 
+[1.1.0]: https://github.com/fyydsz/jadwal-kuliah-unama/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/fyydsz/jadwal-kuliah-unama/releases/tag/v1.0.0
