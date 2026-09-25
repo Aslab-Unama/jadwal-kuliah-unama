@@ -13,10 +13,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
-import { JadwalItem, formatDosenName } from "@/lib/types";
-import { useGlobalTime, getRealtimeScheduleStatus } from "@/lib/time-sync";
+import { id as localeId } from "date-fns/locale";
+import { JadwalItem, formatDosenTableLines } from "@/lib/types";
+import { useGlobalTime, getRealtimeScheduleStatus, getTodayWib } from "@/lib/time-sync";
 import { RealtimeStatusBadge } from "./status-badge";
-import { SearchX } from "lucide-react";
+import { Calendar as CalendarIcon, SearchX } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface ScheduleTableProps {
   items: JadwalItem[];
@@ -24,6 +27,7 @@ interface ScheduleTableProps {
   onSelectItem: (item: JadwalItem) => void;
   onResetFilters?: () => void;
   selectedDate?: Date | null;
+  onDateChange?: (date: Date | null) => void;
 }
 
 function parseStatusAndMethod(rawStatus: string) {
@@ -45,6 +49,7 @@ export function ScheduleTable({
   onSelectItem,
   onResetFilters,
   selectedDate,
+  onDateChange,
 }: ScheduleTableProps) {
   const { currentMins } = useGlobalTime(5000);
 
@@ -88,17 +93,51 @@ export function ScheduleTable({
           </EmptyHeader>
 
           <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
-            {onResetFilters && (
+            {selectedDate && onDateChange ? (
+              <Popover>
+                <PopoverTrigger className="inline-flex items-center gap-1.5 h-8 px-3 text-xs font-medium border border-border bg-background hover:bg-muted/60 transition-colors cursor-pointer select-none rounded-none shadow-2xs">
+                  <CalendarIcon className="size-3.5 text-primary shrink-0" />
+                  <span>Pilih Tanggal</span>
+                </PopoverTrigger>
+                <PopoverContent
+                  align="center"
+                  sideOffset={4}
+                  className="w-auto p-2 rounded-none bg-card border-border shadow-xl space-y-1.5 z-50"
+                >
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate || undefined}
+                    defaultMonth={selectedDate || getTodayWib()}
+                    onSelect={(date) => {
+                      if (date) onDateChange(date);
+                    }}
+                    locale={localeId}
+                    className="rounded-none border border-border bg-background p-1"
+                  />
+                  <div className="flex items-center justify-center border-t border-border pt-1.5 px-0.5">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 w-full px-2 text-[11px] font-medium rounded-none cursor-pointer hover:bg-muted"
+                      onClick={() => onDateChange(getTodayWib())}
+                    >
+                      Hari Ini
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            ) : onResetFilters ? (
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={onResetFilters}
-                className="h-8 rounded-none text-xs"
+                className="h-8 rounded-none text-xs cursor-pointer"
               >
-                Tampilkan Semua Jadwal Semester
+                Atur Ulang Filter
               </Button>
-            )}
+            ) : null}
           </div>
         </Empty>
       </div>
@@ -111,22 +150,22 @@ export function ScheduleTable({
         <Table className="table-fixed w-full">
           <TableHeader className="bg-muted/40 border-b border-border">
             <TableRow className="hover:bg-transparent">
-              <TableHead className="pl-6 w-[16%] font-semibold text-xs text-foreground uppercase tracking-wider">
+              <TableHead className="pl-6 w-[15%] font-semibold text-xs text-foreground uppercase tracking-wider">
                 Waktu
               </TableHead>
-              <TableHead className="w-[32%] font-semibold text-xs text-foreground uppercase tracking-wider">
+              <TableHead className="w-[28%] font-semibold text-xs text-foreground uppercase tracking-wider">
                 Mata Kuliah
               </TableHead>
-              <TableHead className="w-[23%] font-semibold text-xs text-foreground uppercase tracking-wider">
+              <TableHead className="w-[22%] font-semibold text-xs text-foreground uppercase tracking-wider">
                 Dosen
               </TableHead>
-              <TableHead className="w-[16%] font-semibold text-xs text-foreground uppercase tracking-wider">
+              <TableHead className="w-[15%] font-semibold text-xs text-foreground uppercase tracking-wider">
                 Ruangan
               </TableHead>
-              <TableHead className="w-[8%] font-semibold text-xs text-foreground uppercase tracking-wider">
+              <TableHead className="w-[12%] font-semibold text-xs text-foreground uppercase tracking-wider">
                 Status
               </TableHead>
-              <TableHead className="pr-6 w-[5%] font-semibold text-xs text-foreground uppercase tracking-wider">
+              <TableHead className="pr-6 w-[8%] font-semibold text-xs text-foreground uppercase tracking-wider">
                 Metode
               </TableHead>
             </TableRow>
@@ -164,10 +203,24 @@ export function ScheduleTable({
                     </div>
                   </TableCell>
 
-                  {/* Kolom 3: DOSEN (Turun ke bawah / wrap) */}
+                  {/* Kolom 3: DOSEN (Nama >= 4 kata turun ke bawah agar tabel tidak scroll) */}
                   <TableCell className="py-3.5 text-xs text-foreground/90 font-medium align-top whitespace-normal">
-                    <div className="leading-snug break-words whitespace-normal">
-                      {formatDosenName(item.dosen)}
+                    <div className="leading-snug break-words">
+                      {formatDosenTableLines(item.dosen).map((lines, lIdx) => (
+                        <div
+                          key={lIdx}
+                          className={lIdx > 0 ? "mt-1.5 pt-1 border-t border-border/40" : ""}
+                        >
+                          {lines.map((line, lineIdx) => (
+                            <span
+                              key={lineIdx}
+                              className={lineIdx > 0 ? "block text-foreground/80 mt-0.5" : "block"}
+                            >
+                              {line}
+                            </span>
+                          ))}
+                        </div>
+                      ))}
                     </div>
                   </TableCell>
 

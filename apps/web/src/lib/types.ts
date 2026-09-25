@@ -89,6 +89,25 @@ export function formatDosenName(raw: string): string {
     .trim();
 }
 
+/**
+ * Memformat nama dosen khusus tampilan tabel:
+ * Jika nama dosen memiliki 4 kata atau lebih, kata ke-4 dan seterusnya
+ * diletakkan di baris bawah agar kolom tabel tidak melebar dan tabel tidak scroll horizontal.
+ */
+export function formatDosenTableLines(raw: string): string[][] {
+  const formatted = formatDosenName(raw);
+  if (!formatted || formatted === "-") return [["-"]];
+
+  const lecturers = formatted.split(" / ");
+  return lecturers.map((lecturer) => {
+    const words = lecturer.trim().split(/\s+/);
+    if (words.length >= 4) {
+      return [words.slice(0, 3).join(" "), words.slice(3).join(" ")];
+    }
+    return [lecturer];
+  });
+}
+
 const INDO_MONTHS: Record<string, number> = {
   januari: 0,
   februari: 1,

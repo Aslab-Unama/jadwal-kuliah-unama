@@ -9,7 +9,6 @@ function getCookie(name: string): string | null {
 
 import * as React from "react";
 import { Header } from "@/components/dashboard/header";
-import { StatsOverview } from "@/components/dashboard/stats-overview";
 import { ScheduleGrid } from "@/components/dashboard/schedule-grid";
 import { ScheduleDetailDialog } from "@/components/dashboard/schedule-detail-dialog";
 import { PaginationControls } from "@/components/dashboard/pagination-controls";
@@ -69,29 +68,13 @@ export default function HomePage() {
           <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2">
             <div>
               <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-                Jadwal Perkuliahan 
+                Portal Informasi Jadwal 
               </h2>
               <p className="text-sm text-muted-foreground mt-1">
                 Informasi jadwal penggunaan kelas mahasiswa Universitas Dinamika Bangsa (UNAMA).
               </p>
             </div>
           </div>
-        </section>
-
-        {/* Real Statistics Overview (Menyesuaikan dengan Filter Kampus, Ruangan, Tanggal, & Pencarian) */}
-        <section aria-label="Ringkasan Statistik Jadwal">
-          <StatsOverview
-            totalJadwal={summary.totalJadwal}
-            totalCancel={summary.totalCancel}
-            totalOnline={summary.totalOnline}
-            totalTatapMuka={summary.totalTatapMuka}
-            totalKampus={summary.kampusList.length || 2}
-            totalRuangan={summary.ruanganList.length || 11}
-            selectedDate={selectedDate}
-            selectedKampus={filters.kampus}
-            selectedRuangan={filters.ruangan}
-            isLoading={isLoading}
-          />
         </section>
 
         {/* Panel Monitoring Khusus Aslab (Di atas Jadwal Mahasiswa) */}
@@ -126,7 +109,7 @@ export default function HomePage() {
           </section>
         )}
 
-        {/* Schedule Display (Terintegrasi dengan FilterBar dan Pagination di dalam ScheduleGrid) */}
+        {/* Schedule Display (Terintegrasi dengan FilterBar, Statistik di Header, dan Pagination) */}
         <ScheduleGrid
           items={items}
           isLoading={isLoading}
@@ -137,6 +120,7 @@ export default function HomePage() {
           onFilterChange={setFilters}
           kampusList={summary.kampusList}
           ruanganList={summary.ruanganList}
+          summary={summary}
           viewMode={viewMode}
           onViewModeChange={setViewMode}
           totalFiltered={totalFiltered}

@@ -11,17 +11,20 @@ import { Badge } from "@/components/ui/badge";
 import { StatusBadge, RealtimeStatusBadge, MethodBadge } from "./status-badge";
 import { FilterBar } from "./filter-bar";
 import { ScheduleTable } from "./schedule-table";
-import { JadwalFilters, JadwalItem, formatDosenName } from "@/lib/types";
-import { useGlobalTime, getRealtimeScheduleStatus } from "@/lib/time-sync";
+import { StatsOverview } from "./stats-overview";
+import { JadwalFilters, JadwalItem, JadwalSummaryData, formatDosenName } from "@/lib/types";
+import { useGlobalTime, getRealtimeScheduleStatus, getTodayWib } from "@/lib/time-sync";
 import {
   Building2,
-  Calendar,
+  Calendar as CalendarIcon,
   Clock,
   DoorOpen,
   GraduationCap,
   SearchX,
   User,
 } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 export interface ScheduleGridProps {
   items: JadwalItem[];
@@ -40,6 +43,9 @@ export interface ScheduleGridProps {
   onViewModeChange?: (mode: "grid" | "table") => void;
   totalFiltered?: number;
   onDateChange?: (date: Date | null) => void;
+
+  // Ringkasan Statistik Jadwal
+  summary?: JadwalSummaryData;
 
   // Custom slots
   filterBar?: React.ReactNode;
@@ -61,6 +67,7 @@ export function ScheduleGrid({
   onViewModeChange,
   totalFiltered,
   onDateChange,
+  summary,
   filterBar,
   pagination,
 }: ScheduleGridProps) {
@@ -100,8 +107,8 @@ export function ScheduleGrid({
       )}
     >
       {/* Header Panel Jadwal Kuliah */}
-      <div className="flex flex-col gap-3 pb-4 border-b border-border/70 sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-1">
+      <div className="flex flex-col gap-4 pb-4 border-b border-border/70 lg:flex-row lg:items-center lg:justify-between">
+        <div className="space-y-1 shrink-0">
           <div className="flex items-center gap-2">
             <Badge
               variant="outline"
@@ -110,27 +117,32 @@ export function ScheduleGrid({
               <GraduationCap className="size-3 mr-1 text-primary" />
               Sesi Perkuliahan
             </Badge>
-            <span className="text-xs text-muted-foreground font-mono">
-              {totalFiltered !== undefined ? `${totalFiltered} Sesi Terdaftar` : `${items.length} Sesi Terdaftar`}
-            </span>
           </div>
           <h3 className="text-lg font-bold tracking-tight text-foreground sm:text-xl">
             Jadwal Perkuliahan Mahasiswa
           </h3>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground max-w-sm">
             Daftar perkuliahan tatap muka dan online sesuai jadwal akademik aktif UNAMA.
           </p>
         </div>
 
-        {/* Info Tanggal / Status di Sisi Kanan Header */}
-        <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/40 px-3 py-1.5 border border-border/60 self-start sm:self-center font-medium">
-          <Calendar className="size-3.5 text-primary shrink-0" />
-          <span suppressHydrationWarning>
-            {selectedDate
-              ? format(selectedDate, "EEEE, dd MMMM yyyy", { locale: localeId })
-              : "Semua Jadwal Perkuliahan"}
-          </span>
-        </div>
+        {/* Ringkasan Statistik Jadwal (Screenshot 1 dipindahkan ke sisi kanan header) */}
+        {summary && (
+          <div className="w-full lg:w-auto lg:min-w-[560px] xl:min-w-[620px] shrink-0">
+            <StatsOverview
+              totalJadwal={summary.totalJadwal}
+              totalCancel={summary.totalCancel}
+              totalOnline={summary.totalOnline}
+              totalTatapMuka={summary.totalTatapMuka}
+              totalKampus={summary.kampusList.length || 2}
+              totalRuangan={summary.ruanganList.length || 11}
+              selectedDate={selectedDate}
+              selectedKampus={filters?.kampus}
+              selectedRuangan={filters?.ruangan}
+              isLoading={isLoading}
+            />
+          </div>
+        )}
       </div>
 
       {/* FilterBar Terintegrasi Di Dalam Jadwal Perkuliahan */}
@@ -180,7 +192,41 @@ export function ScheduleGrid({
             </EmptyHeader>
 
             <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
-              {onResetFilters && (
+              {selectedDate && onDateChange ? (
+                <Popover>
+                  <PopoverTrigger className="inline-flex items-center gap-1.5 h-8 px-3 text-xs font-medium border border-border bg-background hover:bg-muted/60 transition-colors cursor-pointer select-none rounded-none shadow-2xs">
+                    <CalendarIcon className="size-3.5 text-primary shrink-0" />
+                    <span>Pilih Tanggal</span>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    align="center"
+                    sideOffset={4}
+                    className="w-auto p-2 rounded-none bg-card border-border shadow-xl space-y-1.5 z-50"
+                  >
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate || undefined}
+                      defaultMonth={selectedDate || getTodayWib()}
+                      onSelect={(date) => {
+                        if (date) onDateChange(date);
+                      }}
+                      locale={localeId}
+                      className="rounded-none border border-border bg-background p-1"
+                    />
+                    <div className="flex items-center justify-center border-t border-border pt-1.5 px-0.5">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-full px-2 text-[11px] font-medium rounded-none cursor-pointer hover:bg-muted"
+                        onClick={() => onDateChange(getTodayWib())}
+                      >
+                        Hari Ini
+                      </Button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              ) : onResetFilters ? (
                 <Button
                   type="button"
                   variant="outline"
@@ -188,9 +234,9 @@ export function ScheduleGrid({
                   onClick={onResetFilters}
                   className="h-8 rounded-none text-xs cursor-pointer"
                 >
-                  Tampilkan Semua Jadwal Semester
+                  Atur Ulang Filter
                 </Button>
-              )}
+              ) : null}
             </div>
           </Empty>
         </div>
@@ -201,6 +247,7 @@ export function ScheduleGrid({
           onSelectItem={onSelectItem}
           onResetFilters={onResetFilters}
           selectedDate={selectedDate}
+          onDateChange={onDateChange}
         />
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -267,7 +314,7 @@ export function ScheduleGrid({
             <div className="space-y-2 pt-2 border-t border-border text-xs">
               {/* Hari & Tanggal */}
               <div className="flex items-center gap-1.5 text-foreground font-medium">
-                <Calendar className="size-3.5 text-muted-foreground shrink-0" />
+                <CalendarIcon className="size-3.5 text-muted-foreground shrink-0" />
                 <span>{item.hari}, {item.tanggal}</span>
               </div>
 
