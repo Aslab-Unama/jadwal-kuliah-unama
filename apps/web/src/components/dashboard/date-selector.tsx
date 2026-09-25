@@ -6,12 +6,9 @@ import { id as localeId } from "date-fns/locale";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "cn";
+import { getTodayWib } from "@/lib/time-sync";
 
 export interface DateSelectorProps {
   selectedDate: Date | null;
@@ -29,12 +26,12 @@ export function DateSelector({
   const [isCalendarOpen, setIsCalendarOpen] = React.useState(false);
 
   const handlePrevDay = () => {
-    const cur = selectedDate || new Date();
+    const cur = selectedDate || getTodayWib();
     onDateChange(subDays(cur, 1));
   };
 
   const handleNextDay = () => {
-    const cur = selectedDate || new Date();
+    const cur = selectedDate || getTodayWib();
     onDateChange(addDays(cur, 1));
   };
 
@@ -94,7 +91,7 @@ export function DateSelector({
           <Calendar
             mode="single"
             selected={selectedDate || undefined}
-            defaultMonth={selectedDate || new Date()}
+            defaultMonth={selectedDate || getTodayWib()}
             onSelect={handleDateSelect}
             locale={localeId}
             className="rounded-none border border-border bg-background p-1"
@@ -105,7 +102,7 @@ export function DateSelector({
               variant="ghost"
               size="sm"
               className="h-6 px-2 text-[11px] font-medium rounded-none cursor-pointer"
-              onClick={() => handleDateSelect(new Date())}
+              onClick={() => handleDateSelect(getTodayWib())}
             >
               Hari Ini
             </Button>

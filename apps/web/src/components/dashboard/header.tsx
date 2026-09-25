@@ -16,7 +16,9 @@ import Image from "next/image";
 import { useTheme } from "next-themes";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, Lock, LogOut, Moon, RefreshCw, Sun } from "lucide-react";
+import { Clock, Lock, LogOut, Moon, RefreshCw, Sun, Globe } from "lucide-react";
+import { useGlobalTime } from "@/lib/time-sync";
+import { cn } from "cn";
 
 interface HeaderProps {
   onRefresh?: () => void;
@@ -26,30 +28,13 @@ interface HeaderProps {
 export function Header({ onRefresh, isRefreshing }: HeaderProps) {
   const { theme, setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = React.useState<boolean>(false);
-  const [currentTime, setCurrentTime] = React.useState<string>("");
   const [isAslab, setIsAslab] = React.useState<boolean>(false);
+  const { timeWibStr, isSynced } = useGlobalTime(1000);
 
   React.useEffect(() => {
     setMounted(true);
-
     // Cek status login Aslab
     setIsAslab(getCookie("aslab_logged_in") === "true");
-
-    // Jam WIB
-    const updateTime = () => {
-      const now = new Date();
-      const formatted = now.toLocaleTimeString("id-ID", {
-        timeZone: "Asia/Jakarta",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-      });
-      setCurrentTime(`${formatted} WIB`);
-    };
-
-    updateTime();
-    const interval = setInterval(updateTime, 1000);
-    return () => clearInterval(interval);
   }, []);
 
   const isDark = mounted ? (resolvedTheme || theme) === "dark" : false;
@@ -106,10 +91,22 @@ export function Header({ onRefresh, isRefreshing }: HeaderProps) {
 
         {/* Status Indicators & Action Tools */}
         <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
-          {currentTime && (
-            <div className="hidden md:flex items-center gap-1.5 border border-border px-2.5 py-1 text-xs text-muted-foreground">
+          {mounted && timeWibStr ? (
+            <div
+              className="hidden md:flex items-center gap-1.5 border border-border px-2.5 py-1 text-xs text-muted-foreground select-none"
+              title={isSynced ? "Waktu Global Terverifikasi (WIB)" : "Waktu Real-time (WIB)"}
+              suppressHydrationWarning
+            >
+              <Clock className={cn("size-3.5", isSynced ? "text-emerald-500" : "text-muted-foreground")} />
+              <span className="font-mono" suppressHydrationWarning>{timeWibStr}</span>
+            </div>
+          ) : (
+            <div
+              className="hidden md:flex items-center gap-1.5 border border-transparent px-2.5 py-1 text-xs opacity-0 pointer-events-none select-none"
+              aria-hidden="true"
+            >
               <Clock className="size-3.5 text-muted-foreground" />
-              <span className="font-mono">{currentTime}</span>
+              <span className="font-mono">--:-- WIB</span>
             </div>
           )}
 

@@ -64,8 +64,10 @@ export interface JadwalFilters {
   limit?: number;
 }
 
+import { getGlobalNow } from "./time-sync";
+
 export function getTodayWib(): Date {
-  const now = new Date();
+  const now = getGlobalNow();
   const wibDateStr = now.toLocaleDateString("en-CA", { timeZone: "Asia/Jakarta" });
   const [year, month, day] = wibDateStr.split("-").map(Number);
   return new Date(year, month - 1, day);

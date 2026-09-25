@@ -1,4 +1,5 @@
 import { JadwalApiResponse, JadwalFilters, JadwalItem, JadwalSummaryData, JadwalSummaryFilters, JadwalSummaryResponse } from "./types";
+import { updateGlobalClockFromHeader } from "./time-sync";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -204,6 +205,7 @@ export async function fetchJadwalSummary(
       cache: "no-store",
     });
     clearTimeout(timeoutId);
+    updateGlobalClockFromHeader(response.headers.get("Date") || response.headers.get("date"));
 
     if (!response.ok) {
       throw new Error(`Gagal memuat ringkasan data (HTTP ${response.status})`);
@@ -309,6 +311,7 @@ export async function fetchJadwalList(filters: JadwalFilters): Promise<JadwalApi
       cache: "no-store",
     });
     clearTimeout(timeoutId);
+    updateGlobalClockFromHeader(response.headers.get("Date") || response.headers.get("date"));
 
     if (!response.ok) {
       throw new Error(`Gagal memuat daftar jadwal (HTTP ${response.status})`);

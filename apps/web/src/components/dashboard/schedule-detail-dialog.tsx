@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { StatusBadge } from "./status-badge";
+import { StatusBadge, RealtimeStatusBadge, MethodBadge } from "./status-badge";
 import { JadwalItem, formatDosenName } from "@/lib/types";
 import {
   Building2,
@@ -76,7 +76,13 @@ export function ScheduleDetailDialog({ item, onClose }: ScheduleDetailDialogProp
                   <Badge variant="outline" className="font-mono text-xs font-semibold px-2 py-0.5 rounded-none">
                     {item.kodeKelas}
                   </Badge>
-                  <StatusBadge status={item.status} className="rounded-none text-xs" />
+                  <RealtimeStatusBadge
+                    status={item.status}
+                    waktuMulai={item.waktuMulai}
+                    tanggal={item.tanggal}
+                    className="rounded-none text-xs"
+                  />
+                  <MethodBadge status={item.status} className="rounded-none text-xs" />
                 </div>
                 {/* Jam Berjalan Real-Time (WIB) */}
                 <div className="shrink-0">

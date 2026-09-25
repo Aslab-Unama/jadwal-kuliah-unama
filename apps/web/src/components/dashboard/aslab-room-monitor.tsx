@@ -34,7 +34,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { DateSelector } from "./date-selector";
-import { StatusBadge } from "./status-badge";
+import { StatusBadge, RealtimeStatusBadge, MethodBadge } from "./status-badge";
 import { PaginationControls } from "./pagination-controls";
 import {
   calculateLabGaps,
@@ -48,7 +48,14 @@ import {
   isLabRoom,
   UNAMA_LABS,
 } from "@/lib/lab-utils";
-import { JadwalItem, formatDosenName } from "@/lib/types";
+import { JadwalItem, formatDosenName, formatDateDb } from "@/lib/types";
+import {
+  useGlobalTime,
+  getRealtimeScheduleStatus,
+  isDateToday,
+  isDatePast,
+  isDateFuture,
+} from "@/lib/time-sync";
 
 /**
  * Penanda status perkuliahan di akhir link (teks warna simpel tanpa border/box):
@@ -90,23 +97,11 @@ function ClassStatusTag({ status }: { status?: string }) {
  * Komponen jam digital berjalan (real-time ticking per detik) WIB
  */
 export function LiveRunningClock({ className }: { className?: string }) {
-  const [time, setTime] = React.useState<string>("");
+  const [mounted, setMounted] = React.useState(false);
+  const { timeWibStr, isSynced } = useGlobalTime(1000);
 
   React.useEffect(() => {
-    const update = () => {
-      const now = new Date();
-      setTime(
-        now.toLocaleTimeString("id-ID", {
-          timeZone: "Asia/Jakarta",
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-        }) + " WIB"
-      );
-    };
-    update();
-    const timer = setInterval(update, 1000);
-    return () => clearInterval(timer);
+    setMounted(true);
   }, []);
 
   return (
@@ -115,10 +110,11 @@ export function LiveRunningClock({ className }: { className?: string }) {
         "inline-flex items-center gap-1.5 font-mono text-xs sm:text-sm font-bold bg-muted/60 border border-border px-2.5 py-1 rounded-none text-foreground select-none",
         className
       )}
-      title="Waktu Real-time Saat Ini (WIB)"
+      title={isSynced ? "Waktu Global Terverifikasi (WIB)" : "Waktu Real-time Saat Ini (WIB)"}
+      suppressHydrationWarning
     >
-      <Clock className="size-3.5 text-muted-foreground shrink-0" />
-      <span>{time || "--:--:-- WIB"}</span>
+      <Clock className={cn("size-3.5 shrink-0", isSynced ? "text-emerald-500" : "text-muted-foreground")} />
+      <span suppressHydrationWarning>{mounted && timeWibStr ? timeWibStr : "--:-- WIB"}</span>
     </div>
   );
 }
@@ -253,37 +249,10 @@ export function AslabRoomMonitor({
   const [selectedKampus, setSelectedKampus] = React.useState<string>(globalKampus || "Semua");
   const [filterType, setFilterType] = React.useState<"all" | "lab_only">("lab_only");
   const [searchRoom, setSearchRoom] = React.useState<string>("");
-  const [currentTimeWib, setCurrentTimeWib] = React.useState<string>("");
-
-  const [currentMins, setCurrentMins] = React.useState<number>(() => {
-    const parts = new Intl.DateTimeFormat("id-ID", {
-      timeZone: "Asia/Jakarta",
-      hour: "numeric",
-      minute: "numeric",
-      hourCycle: "h23",
-    }).formatToParts(new Date());
-    const h = parseInt(parts.find((p) => p.type === "hour")?.value || "0", 10);
-    const m = parseInt(parts.find((p) => p.type === "minute")?.value || "0", 10);
-    return h * 60 + m;
-  });
-
-  React.useEffect(() => {
-    const updateTime = () => {
-      const parts = new Intl.DateTimeFormat("id-ID", {
-        timeZone: "Asia/Jakarta",
-        hour: "numeric",
-        minute: "numeric",
-        hourCycle: "h23",
-      }).formatToParts(new Date());
-      const h = parseInt(parts.find((p) => p.type === "hour")?.value || "0", 10);
-      const m = parseInt(parts.find((p) => p.type === "minute")?.value || "0", 10);
-      setCurrentMins(h * 60 + m);
-      setCurrentTimeWib(`${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`);
-    };
-    updateTime();
-    const timer = setInterval(updateTime, 5000);
-    return () => clearInterval(timer);
-  }, []);
+  const { currentMins, timeWibStr } = useGlobalTime(3000);
+  const currentTimeWib = React.useMemo(() => {
+    return timeWibStr ? timeWibStr.replace(" WIB", "") : "";
+  }, [timeWibStr]);
 
   // Fullscreen & Modal states untuk tampilan Matriks
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -324,22 +293,6 @@ export function AslabRoomMonitor({
     }
   }, [globalKampus]);
 
-  // Update jam real-time setiap 30 detik
-  React.useEffect(() => {
-    const updateTime = () => {
-      const now = new Date();
-      const formatted = now.toLocaleTimeString("id-ID", {
-        timeZone: "Asia/Jakarta",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-      setCurrentTimeWib(formatted);
-    };
-
-    updateTime();
-    const interval = setInterval(updateTime, 30000);
-    return () => clearInterval(interval);
-  }, []);
 
   // Hitung ruang yang sedang dipakai
   const { activeNow, allTodayUsed } = React.useMemo(() => {
@@ -474,43 +427,64 @@ export function AslabRoomMonitor({
           (a, b) => timeToMinutes(a.waktuMulai) - timeToMinutes(b.waktuMulai)
         );
 
-        const liveClass = sorted.find((c) => {
-          const s = timeToMinutes(c.waktuMulai);
-          return currentMins >= s && currentMins < s + 100;
-        });
+        const targetDateStr = selectedDate ? formatDateDb(selectedDate) : sorted[0]?.tanggal;
+        const isPast = targetDateStr ? isDatePast(targetDateStr) : false;
+        const isFuture = targetDateStr ? isDateFuture(targetDateStr) : false;
 
-        if (liveClass) {
-          status = "dipakai";
-          subtitle = "Sedang Dipakai";
-          colorClass = "bg-emerald-500 hover:bg-emerald-600 text-white border-transparent";
-          badgeColor = "bg-emerald-500 text-white border-transparent";
-          dotColor = "bg-white animate-pulse";
-          subtitleColor = "text-emerald-100";
+        if (isPast) {
+          status = "selesai";
+          subtitle = `Selesai (${sorted.length} Kelas)`;
+          colorClass = "bg-slate-500 hover:bg-slate-600 text-white border-transparent";
+          badgeColor = "bg-slate-500 text-white border-transparent";
+          dotColor = "bg-white/80";
+          subtitleColor = "text-slate-100";
+        } else if (isFuture) {
+          status = "terjadwal";
+          subtitle = `Terjadwal (${sorted.length} Kelas)`;
+          colorClass = "bg-blue-500 hover:bg-blue-600 text-white border-transparent";
+          badgeColor = "bg-blue-500 text-white border-transparent";
+          dotColor = "bg-white";
+          subtitleColor = "text-blue-100";
         } else {
-          const firstStart = timeToMinutes(sorted[0].waktuMulai);
-          const lastEnd = timeToMinutes(sorted[sorted.length - 1].waktuMulai) + 100;
+          // Hari Ini: Evaluasi realtime berdasarkan jam
+          const liveClass = sorted.find((c) => {
+            const s = timeToMinutes(c.waktuMulai);
+            return currentMins >= s && currentMins < s + 100;
+          });
 
-          if (currentMins < firstStart) {
-            status = "terjadwal";
-            subtitle = `Terjadwal (${sorted.length} Kelas)`;
-            colorClass = "bg-blue-500 hover:bg-blue-600 text-white border-transparent";
-            badgeColor = "bg-blue-500 text-white border-transparent";
-            dotColor = "bg-white";
-            subtitleColor = "text-blue-100";
-          } else if (currentMins >= lastEnd) {
-            status = "selesai";
-            subtitle = `Selesai (${sorted.length} Kelas)`;
-            colorClass = "bg-slate-500 hover:bg-slate-600 text-white border-transparent";
-            badgeColor = "bg-slate-500 text-white border-transparent";
-            dotColor = "bg-white/80";
-            subtitleColor = "text-slate-100";
+          if (liveClass) {
+            status = "dipakai";
+            subtitle = "Sedang Dipakai";
+            colorClass = "bg-emerald-500 hover:bg-emerald-600 text-white border-transparent";
+            badgeColor = "bg-emerald-500 text-white border-transparent";
+            dotColor = "bg-white animate-pulse";
+            subtitleColor = "text-emerald-100";
           } else {
-            status = "jeda";
-            subtitle = "Jeda";
-            colorClass = "bg-amber-500 hover:bg-amber-600 text-white border-transparent";
-            badgeColor = "bg-amber-500 text-white border-transparent";
-            dotColor = "bg-white";
-            subtitleColor = "text-amber-100";
+            const firstStart = timeToMinutes(sorted[0].waktuMulai);
+            const lastEnd = timeToMinutes(sorted[sorted.length - 1].waktuMulai) + 100;
+
+            if (currentMins < firstStart) {
+              status = "terjadwal";
+              subtitle = `Terjadwal (${sorted.length} Kelas)`;
+              colorClass = "bg-blue-500 hover:bg-blue-600 text-white border-transparent";
+              badgeColor = "bg-blue-500 text-white border-transparent";
+              dotColor = "bg-white";
+              subtitleColor = "text-blue-100";
+            } else if (currentMins >= lastEnd) {
+              status = "selesai";
+              subtitle = `Selesai (${sorted.length} Kelas)`;
+              colorClass = "bg-slate-500 hover:bg-slate-600 text-white border-transparent";
+              badgeColor = "bg-slate-500 text-white border-transparent";
+              dotColor = "bg-white/80";
+              subtitleColor = "text-slate-100";
+            } else {
+              status = "jeda";
+              subtitle = "Jeda";
+              colorClass = "bg-amber-500 hover:bg-amber-600 text-white border-transparent";
+              badgeColor = "bg-amber-500 text-white border-transparent";
+              dotColor = "bg-white";
+              subtitleColor = "text-amber-100";
+            }
           }
         }
       }
@@ -541,7 +515,7 @@ export function AslabRoomMonitor({
       kobarTheoryRooms: processed.filter((r) => !r.isLabor && r.kampus === "Kampus Kobar").sort(naturalSort),
       allGridRooms: processed,
     };
-  }, [items, currentMins]);
+  }, [items, currentMins, selectedDate]);
 
   // Render Kartu Ruangan Matriks Berwarna Sesuai Screenshot Asli & globals.css (rounded-lg)
   const renderRoomGridCard = (room: RoomGridItem) => {
@@ -839,7 +813,13 @@ export function AslabRoomMonitor({
                             LIVE
                           </span>
                         ) : (
-                          <StatusBadge status={room.status} className="text-[11px] px-2.5 py-0.5 h-auto" />
+                          <RealtimeStatusBadge
+                            status={room.status}
+                            waktuMulai={room.waktuMulai}
+                            tanggal={rawItem.tanggal}
+                            currentMins={currentMins}
+                            className="text-[11px] px-2.5 py-0.5 h-auto"
+                          />
                         )}
                       </div>
 
@@ -957,7 +937,20 @@ export function AslabRoomMonitor({
                             <span className="tracking-wider">{room.kodeKelas}</span>
                           </div>
                         </div>
-                        <StatusBadge status={room.status} className="text-[11px] px-2.5 py-0.5 h-auto" />
+                        {room.isLiveNow ? (
+                          <span className="inline-flex items-center gap-1 font-mono text-[10px] font-bold px-2 py-0.5 bg-emerald-500 text-white dark:bg-emerald-600">
+                            <span className="size-1.5 rounded-full bg-white animate-ping" />
+                            LIVE
+                          </span>
+                        ) : (
+                          <RealtimeStatusBadge
+                            status={room.status}
+                            waktuMulai={room.waktuMulai}
+                            tanggal={rawItem.tanggal}
+                            currentMins={currentMins}
+                            className="text-[11px] px-2.5 py-0.5 h-auto"
+                          />
+                        )}
                       </div>
 
                       <div className="space-y-1.5">
@@ -1549,18 +1542,15 @@ export function AslabRoomMonitor({
                       const startMins = timeToMinutes(cls.waktuMulai);
                       const endMins = startMins + 100;
                       const isPhysical = isPhysicalClass(cls.status, cls.ruangan);
-                      const isLive = isPhysical && currentMins >= startMins && currentMins < endMins;
-
-                      const isTopTerjadwal = isRoomTerjadwal && absoluteIdx === 0;
-                      const isBottomSelesai = isRoomSelesai && absoluteIdx === sortedModalClasses.length - 1;
+                      const realtime = getRealtimeScheduleStatus(cls, currentMins);
 
                       let cardStyle = "border border-border bg-card hover:border-primary/60 hover:bg-muted/30";
-                      if (isLive) {
+                      if (realtime.isLive) {
                         cardStyle = "border-2 border-emerald-500 bg-emerald-500/5 dark:bg-emerald-950/20 ring-1 ring-emerald-500/40 shadow-xs";
-                      } else if (isTopTerjadwal) {
-                        cardStyle = "border-2 border-blue-500 bg-blue-500/5 dark:bg-blue-950/20 ring-1 ring-blue-500/40 shadow-xs";
-                      } else if (isBottomSelesai) {
-                        cardStyle = "border-2 border-slate-500 bg-slate-500/5 dark:bg-slate-900/30 ring-1 ring-slate-500/40 shadow-xs";
+                      } else if (realtime.isUpcoming) {
+                        cardStyle = "border-2 border-blue-500/80 bg-blue-500/5 dark:bg-blue-950/20 ring-1 ring-blue-500/40 shadow-xs";
+                      } else if (realtime.isPassed) {
+                        cardStyle = "border border-border/70 bg-muted/20 opacity-80 hover:opacity-100";
                       }
 
                       return (
@@ -1636,26 +1626,31 @@ export function AslabRoomMonitor({
                                 <div className="font-mono text-xs sm:text-sm font-bold px-2.5 py-1 bg-primary/10 text-primary border border-primary/30 rounded-none">
                                   {cls.kodeKelas}
                                 </div>
-                                {isLive && (
+                                {realtime.isLive && (
                                   <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-emerald-500 text-white font-mono text-[10px] sm:text-xs font-bold uppercase rounded-none">
-                                    <span className="size-1.5 rounded-full bg-white" />
+                                    <span className="size-1.5 rounded-full bg-white animate-ping" />
                                     Sedang Digunakan
                                   </span>
                                 )}
-                                {isTopTerjadwal && (
+                                {realtime.isUpcoming && (
                                   <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-blue-500 text-white font-mono text-[10px] sm:text-xs font-bold uppercase rounded-none">
-                                    Terjadwal Berikutnya
+                                    Terjadwal
                                   </span>
                                 )}
-                                {isBottomSelesai && (
+                                {realtime.isPassed && (
                                   <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-slate-500 text-white font-mono text-[10px] sm:text-xs font-bold uppercase rounded-none">
                                     Selesai
+                                  </span>
+                                )}
+                                {realtime.isCancelled && (
+                                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-destructive text-white font-mono text-[10px] sm:text-xs font-bold uppercase rounded-none">
+                                    Cancel
                                   </span>
                                 )}
                               </div>
 
                               <div className="flex items-center gap-2">
-                                <StatusBadge status={cls.status} className="text-xs px-2.5 py-1 h-auto rounded-none" />
+                                <MethodBadge status={cls.status} className="text-xs px-2.5 py-1 h-auto rounded-none" />
                               </div>
                             </div>
 

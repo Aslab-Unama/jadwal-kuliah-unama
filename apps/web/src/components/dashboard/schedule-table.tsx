@@ -14,6 +14,8 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { JadwalItem, formatDosenName } from "@/lib/types";
+import { useGlobalTime, getRealtimeScheduleStatus } from "@/lib/time-sync";
+import { RealtimeStatusBadge } from "./status-badge";
 import { SearchX } from "lucide-react";
 
 interface ScheduleTableProps {
@@ -44,6 +46,8 @@ export function ScheduleTable({
   onResetFilters,
   selectedDate,
 }: ScheduleTableProps) {
+  const { currentMins } = useGlobalTime(5000);
+
   if (isLoading) {
     return (
       <div className="overflow-hidden border border-border bg-card shadow-xs">
@@ -129,7 +133,7 @@ export function ScheduleTable({
           </TableHeader>
           <TableBody>
             {items.map((item) => {
-              const { status, method } = parseStatusAndMethod(item.status);
+              const realtime = getRealtimeScheduleStatus(item, currentMins);
               const kampusShort = item.kampus.replace("Kampus ", "");
 
               return (
@@ -174,14 +178,20 @@ export function ScheduleTable({
                     </div>
                   </TableCell>
 
-                  {/* Kolom 5: STATUS */}
+                  {/* Kolom 5: STATUS REALTIME */}
                   <TableCell className="py-3.5 text-xs font-medium text-foreground whitespace-nowrap align-top">
-                    {status}
+                    <RealtimeStatusBadge
+                      status={item.status}
+                      waktuMulai={item.waktuMulai}
+                      tanggal={item.tanggal}
+                      currentMins={currentMins}
+                      className="text-[11px] px-2 py-0.5"
+                    />
                   </TableCell>
 
                   {/* Kolom 6: METODE */}
                   <TableCell className="pr-6 py-3.5 whitespace-nowrap align-top">
-                    {method === "TM" && (
+                    {realtime.method === "TM" && (
                       <Badge
                         variant="secondary"
                         className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 dark:bg-emerald-500/20 border-emerald-500/20 font-bold px-2 py-0.5 text-[11px]"
@@ -189,7 +199,7 @@ export function ScheduleTable({
                         TM
                       </Badge>
                     )}
-                    {method === "OL" && (
+                    {realtime.method === "OL" && (
                       <Badge
                         variant="secondary"
                         className="bg-sky-500/10 text-sky-700 dark:text-sky-300 dark:bg-sky-500/20 border-sky-500/20 font-bold px-2 py-0.5 text-[11px]"
@@ -197,7 +207,7 @@ export function ScheduleTable({
                         OL
                       </Badge>
                     )}
-                    {method === "-" && (
+                    {realtime.method === "-" && (
                       <span className="text-muted-foreground font-mono text-xs">-</span>
                     )}
                   </TableCell>

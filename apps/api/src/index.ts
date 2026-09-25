@@ -83,6 +83,15 @@ export const app = new Elysia()
   }))
   .group('/api', (api) =>
     api
+      .get('/time', () => {
+        const now = new Date();
+        return {
+          success: true,
+          timestamp: now.getTime(),
+          iso: now.toISOString(),
+          timezone: 'Asia/Jakarta',
+        };
+      })
       .get(
         '/jadwal',
         async ({ query }) => {

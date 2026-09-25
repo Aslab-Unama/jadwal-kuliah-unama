@@ -1,4 +1,5 @@
 import { JadwalItem } from "./types";
+import { getGlobalMinutesWib } from "./time-sync";
 
 export interface LabGapClassRef {
   mataKuliah: string;
@@ -314,11 +315,7 @@ export function getInUseRooms(
   if (nowTime) {
     currentMinutes = timeToMinutes(nowTime);
   } else {
-    // Jam WIB sekarang
-    const now = new Date();
-    const wibHours = (now.getUTCHours() + 7) % 24;
-    const wibMins = now.getUTCMinutes();
-    currentMinutes = wibHours * 60 + wibMins;
+    currentMinutes = getGlobalMinutesWib();
   }
 
   // Tampilkan seluruh jadwal hari ini (Tatap Muka, Online, maupun Batal)

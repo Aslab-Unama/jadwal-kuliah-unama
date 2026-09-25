@@ -8,10 +8,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { StatusBadge } from "./status-badge";
+import { StatusBadge, RealtimeStatusBadge, MethodBadge } from "./status-badge";
 import { FilterBar } from "./filter-bar";
 import { ScheduleTable } from "./schedule-table";
 import { JadwalFilters, JadwalItem, formatDosenName } from "@/lib/types";
+import { useGlobalTime, getRealtimeScheduleStatus } from "@/lib/time-sync";
 import {
   Building2,
   Calendar,
@@ -63,6 +64,8 @@ export function ScheduleGrid({
   filterBar,
   pagination,
 }: ScheduleGridProps) {
+  const { currentMins } = useGlobalTime(5000);
+
   const renderedFilterBar = filterBar ? (
     filterBar
   ) : filters &&
@@ -201,33 +204,50 @@ export function ScheduleGrid({
         />
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {items.map((item) => (
-          <div
-            key={item.id}
-            role="button"
-            tabIndex={0}
-            onClick={() => onSelectItem(item)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                onSelectItem(item);
-              }
-            }}
-            className="group relative flex flex-col justify-between gap-3 border border-border bg-card p-4 text-left shadow-xs transition-all hover:border-primary/50 hover:shadow-sm hover:bg-muted/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
-          >
-            {/* Header Row: Jam Mulai, Kode Kelas, Status */}
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center flex-wrap gap-2">
-                <div className="flex items-center gap-1.5 font-mono text-[11px] font-medium text-foreground bg-muted/60 px-2.5 py-0.5 border border-border">
-                  <Clock className="size-3.5 text-muted-foreground shrink-0" />
-                  <span>{item.waktuMulai} WIB</span>
+          {items.map((item) => {
+            const realtime = getRealtimeScheduleStatus(item, currentMins);
+
+            return (
+              <div
+                key={item.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => onSelectItem(item)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onSelectItem(item);
+                  }
+                }}
+                className={cn(
+                  "group relative flex flex-col justify-between gap-3 border bg-card p-4 text-left shadow-xs transition-all hover:border-primary/50 hover:shadow-sm hover:bg-muted/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer",
+                  realtime.isLive
+                    ? "border-emerald-500/70 ring-1 ring-emerald-500/30"
+                    : "border-border"
+                )}
+              >
+                {/* Header Row: Jam Mulai, Kode Kelas, Status Realtime & Metode */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center flex-wrap gap-2">
+                    <div className="flex items-center gap-1.5 font-mono text-[11px] font-medium text-foreground bg-muted/60 px-2.5 py-0.5 border border-border">
+                      <Clock className="size-3.5 text-muted-foreground shrink-0" />
+                      <span>{item.waktuMulai} WIB</span>
+                    </div>
+                    <div className="flex items-center font-mono text-[11px] font-bold px-2.5 py-0.5 bg-primary/10 text-primary border border-primary/30 dark:bg-primary/20 dark:border-primary/40">
+                      <span className="tracking-wider">{item.kodeKelas}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <RealtimeStatusBadge
+                      status={item.status}
+                      waktuMulai={item.waktuMulai}
+                      tanggal={item.tanggal}
+                      currentMins={currentMins}
+                      className="text-[11px] px-2.5 py-0.5 h-auto"
+                    />
+                    <MethodBadge status={item.status} className="text-[11px] px-2 py-0.5 h-auto hidden sm:inline-flex" />
+                  </div>
                 </div>
-                <div className="flex items-center font-mono text-[11px] font-bold px-2.5 py-0.5 bg-primary/10 text-primary border border-primary/30 dark:bg-primary/20 dark:border-primary/40">
-                  <span className="tracking-wider">{item.kodeKelas}</span>
-                </div>
-              </div>
-              <StatusBadge status={item.status} className="text-[11px] px-2.5 py-0.5 h-auto" />
-            </div>
 
             {/* Course Name & Lecturer */}
             <div className="space-y-1.5">
@@ -264,7 +284,8 @@ export function ScheduleGrid({
               </div>
             </div>
           </div>
-        ))}
+        );
+      })}
       </div>
       )}
 
