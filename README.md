@@ -47,37 +47,38 @@ jadwal-kuliah-unama/
 | Teknologi | Versi | Peran dan Alasan Penggunaan |
 | :--- | :--- | :--- |
 | Bun | 1.4+ | Runtime JavaScript/TypeScript utama dan package manager monorepo. Memberikan waktu startup dan eksekusi cepat untuk scraping dan HTTP server. |
-| TypeScript | 5.8+ | Menjaga konsistensi tipe data di seluruh package monorepo (skema database, tipe response API, dan state frontend). |
+| TypeScript | 7.0+ | Menjaga konsistensi tipe data di seluruh package monorepo (skema database, tipe response API, dan state frontend). |
 
 ### Frontend (`apps/web`)
 
 | Teknologi | Versi | Peran dan Alasan Penggunaan |
 | :--- | :--- | :--- |
-| Next.js | 16.3.5 | Framework React dengan App Router untuk rendering aplikasi web. |
-| React | 19.2.8 | Library antarmuka komponen UI. |
+| Next.js | 16.3.6 | Framework React dengan App Router untuk rendering aplikasi web. |
+| React | 19.3.0 | Library antarmuka komponen UI. |
 | Tailwind CSS | 4.x | Styling utilitas CSS untuk antarmuka dashboard. |
 | shadcn/ui & Base UI | 4.21 / 1.8 | Komponen UI modular berbasis accessible primitives. |
 | Zustand | 5.0.15 | State management sisi klien untuk menyimpan dataset jadwal dan memproses filter instan di memori browser. |
 | date-fns | 4.4.0 | Utilitas manipulasi tanggal dan kalkulasi waktu dengan format lokal Indonesia. |
-| Recharts | 3.8.0 | Visualisasi grafik data statistik perkuliahan. |
-| Lucide React | 1.45.0 | Koleksi ikon antarmuka. |
+| Recharts | 3.10.1 | Visualisasi grafik data statistik perkuliahan. |
+| Lucide React | 1.48.0 | Koleksi ikon antarmuka. |
 | next-themes | 0.4.6 | Manajemen tema tampilan (Light, Dark, System). |
 
 ### Backend API (`apps/api`)
 
 | Teknologi | Versi | Peran dan Alasan Penggunaan |
 | :--- | :--- | :--- |
-| ElysiaJS | 1.2.25 | Framework web HTTP performa tinggi yang dirancang khusus untuk Bun runtime. |
-| @elysiajs/cors | 1.2.0 | Middleware pengelolaan Cross-Origin Resource Sharing. |
-| @upstash/redis | 1.38.4 | Klien serverless Redis berbasis REST API untuk cache L2 tanpa koneksi TCP persisten. |
+| ElysiaJS | 1.4.30 | Framework web HTTP performa tinggi yang dirancang khusus untuk Bun runtime. |
+| @elysiajs/cors | 1.4.2 | Middleware pengelolaan Cross-Origin Resource Sharing. |
+| @upstash/redis | 1.39.0 | Klien serverless Redis berbasis REST API untuk cache L2 tanpa koneksi TCP persisten. |
 
 ### Data Ingestion dan Database (`apps/scrapper` & `packages/db`)
 
 | Teknologi | Versi | Peran dan Alasan Penggunaan |
 | :--- | :--- | :--- |
-| Cheerio | 1.0.0 | Parser HTML cepat berbasis selektor jQuery untuk mengekstrak data dari tabel jadwal BAAK. |
-| Drizzle ORM | 0.40.0 | TypeScript ORM ringan dengan sintaks SQL-like untuk query dan migrasi skema. |
-| postgres.js | 3.4.5 | Driver PostgreSQL berkecepatan tinggi dengan dukungan pooling transaksi Supabase. |
+| Cheerio | 1.2.0 | Parser HTML cepat berbasis selektor jQuery untuk mengekstrak data dari tabel jadwal BAAK. |
+| Drizzle ORM | 0.45.3 | TypeScript ORM ringan dengan sintaks SQL-like untuk query dan migrasi skema. |
+| drizzle-kit | 0.31.11 | Perangkat CLI manajemen migrasi dan inspeksi skema basis data. |
+| postgres.js | 3.4.9 | Driver PostgreSQL berkecepatan tinggi dengan dukungan pooling transaksi Supabase. |
 | Supabase | PostgreSQL 15 | Database relasional terkelola (region Singapore / ap-southeast-1). |
 
 ## Fitur Utama
