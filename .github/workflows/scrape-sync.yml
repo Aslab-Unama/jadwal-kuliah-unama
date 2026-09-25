@@ -14,9 +14,9 @@ on:
           - all
           - labor
 
-  # Opsional: Jadwal otomatis mingguan (setiap Senin pukul 05:00 WIB / 22:00 UTC Minggu)
+  # Jadwal otomatis harian setiap pukul 00:00 WIB (17:00 UTC)
   schedule:
-    - cron: '0 22 * * 0'
+    - cron: '0 17 * * *'
 
 jobs:
   scrape-and-sync:
