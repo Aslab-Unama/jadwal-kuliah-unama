@@ -563,14 +563,14 @@ export function AslabRoomMonitor({
       ref={containerRef}
       aria-label="Panel Asisten Laboratorium"
       className={cn(
-        "relative border border-primary/30 bg-card p-3.5 sm:p-6 shadow-xs transition-all",
+        "relative border border-primary/30 bg-card p-3 sm:p-6 shadow-xs transition-all",
         isFullscreen && "fixed inset-0 z-50 overflow-y-auto bg-background p-4 sm:p-8 m-0 rounded-none border-none shadow-2xl",
         className
       )}
     >
       {/* Header Panel Aslab */}
-      <div className="flex flex-col gap-3 pb-3 sm:pb-4 border-b border-border/70 sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-1">
+      <div className="flex flex-col gap-2.5 pb-2.5 sm:pb-4 border-b border-border/70 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-0.5 sm:space-y-1">
           <div className="flex items-center gap-2">
             <Badge
               variant="outline"
@@ -580,19 +580,19 @@ export function AslabRoomMonitor({
               Panel Monitoring Aslab
             </Badge>
           </div>
-          <h3 className="text-base sm:text-xl font-bold tracking-tight text-foreground leading-snug">
+          <h3 className="text-sm sm:text-xl font-bold tracking-tight text-foreground leading-snug">
             Status Penggunaan Ruangan
           </h3>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-[11px] sm:text-xs text-muted-foreground">
             Informasi real-time ruang kelas dan laboratorium aktif serta estimasi jeda waktu kosong.
           </p>
         </div>
 
-        {/* Quick Tabs & Action Button */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1 sm:pt-0">
+        {/* Quick Tabs & Action Button: 3 Kolom Kompak di Mobile, Baris Elegan di Desktop */}
+        <div className="grid grid-cols-3 sm:flex sm:flex-row items-stretch sm:items-center gap-1 sm:gap-2 pt-1 sm:pt-0">
           {isFullscreen && (
             <>
-              <LiveRunningClock className="h-8 py-0 justify-center shrink-0 text-xs font-mono font-bold" />
+              <LiveRunningClock className="h-7.5 sm:h-8 py-0 justify-center shrink-0 text-xs font-mono font-bold" />
               <div className="h-5 w-px bg-border mx-0.5 hidden sm:block" />
             </>
           )}
@@ -601,10 +601,12 @@ export function AslabRoomMonitor({
             variant={activeTab === "terpakai" ? "default" : "outline"}
             size="sm"
             onClick={() => setActiveTab("terpakai")}
-            className="h-8 gap-1.5 cursor-pointer text-xs rounded-none justify-center"
+            className="h-7.5 sm:h-8 px-1 sm:px-3 gap-1 sm:gap-1.5 cursor-pointer text-[11px] sm:text-xs rounded-none justify-center"
           >
-            <DoorClosed className="size-3.5" />
-            <span>Ruang Terpakai ({filteredUsedRooms.length})</span>
+            <DoorClosed className="size-3 sm:size-3.5 shrink-0" />
+            <span className="truncate">
+              <span className="hidden sm:inline">Ruang </span>Terpakai ({filteredUsedRooms.length})
+            </span>
           </Button>
 
           <Button
@@ -612,14 +614,16 @@ export function AslabRoomMonitor({
             size="sm"
             onClick={() => setActiveTab("jeda_kosong")}
             className={cn(
-              "h-8 gap-1.5 cursor-pointer text-xs rounded-none justify-center transition-colors font-semibold",
+              "h-7.5 sm:h-8 px-1 sm:px-3 gap-1 sm:gap-1.5 cursor-pointer text-[11px] sm:text-xs rounded-none justify-center transition-colors font-semibold",
               activeTab === "jeda_kosong"
                 ? "bg-primary text-primary-foreground hover:bg-primary/90 border-transparent"
                 : "border-emerald-500/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/10"
             )}
           >
-            <Timer className={cn("size-3.5", activeTab === "jeda_kosong" ? "text-primary-foreground" : "text-emerald-600 dark:text-emerald-400")} />
-            <span>Cek Jeda & Ruang Kosong ({filteredGaps.length})</span>
+            <Timer className={cn("size-3 sm:size-3.5 shrink-0", activeTab === "jeda_kosong" ? "text-primary-foreground" : "text-emerald-600 dark:text-emerald-400")} />
+            <span className="truncate">
+              <span className="hidden sm:inline">Cek </span>Jeda<span className="hidden sm:inline"> &amp; Ruang Kosong</span> ({filteredGaps.length})
+            </span>
           </Button>
 
           <Button
@@ -627,66 +631,66 @@ export function AslabRoomMonitor({
             size="sm"
             onClick={() => setActiveTab("matriks")}
             className={cn(
-              "h-8 gap-1.5 cursor-pointer text-xs rounded-none justify-center transition-colors font-semibold",
+              "h-7.5 sm:h-8 px-1 sm:px-3 gap-1 sm:gap-1.5 cursor-pointer text-[11px] sm:text-xs rounded-none justify-center transition-colors font-semibold",
               activeTab === "matriks"
                 ? "bg-primary text-primary-foreground hover:bg-primary/90 border-transparent"
                 : "border-blue-500/40 text-blue-700 dark:text-blue-300 hover:bg-blue-500/10"
             )}
           >
-            <LayoutGrid className={cn("size-3.5", activeTab === "matriks" ? "text-primary-foreground" : "text-blue-600 dark:text-blue-400")} />
-            <span>Matriks Ruangan</span>
+            <LayoutGrid className={cn("size-3 sm:size-3.5 shrink-0", activeTab === "matriks" ? "text-primary-foreground" : "text-blue-600 dark:text-blue-400")} />
+            <span className="truncate">
+              Matriks<span className="hidden sm:inline"> Ruangan</span>
+            </span>
           </Button>
         </div>
       </div>
 
       {/* Sub-Filters: Tanggal Picker, Kampus, Tipe Ruang, Pencarian */}
-      <div className="flex flex-col gap-2.5 py-3 sm:flex-row sm:items-center sm:justify-between border-b border-border/50 text-xs">
-        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-          {/* Kontrol Kalender & Navigasi Hari Identik dengan FilterBar */}
+      <div className="flex flex-col gap-2.5 py-2.5 sm:py-3 sm:flex-row sm:items-center sm:justify-between border-b border-border/50 text-xs">
+        {/* Kontrol Kalender & Filter Desktop */}
+        <div className="flex items-center gap-1.5 sm:gap-2">
           {onDateChange && (
             <DateSelector selectedDate={selectedDate || null} onDateChange={onDateChange} />
           )}
 
-          <div className="h-4 w-px bg-border mx-0.5 hidden sm:block" />
-
-          {/* Filter Kampus */}
-          {["Semua", "Kampus Thehok", "Kampus Kobar"].map((kp) => (
-            <button
-              key={kp}
-              type="button"
-              onClick={() => setSelectedKampus(kp)}
-              aria-pressed={selectedKampus === kp}
-              className={cn(
-                "px-2 sm:px-2.5 py-1 text-xs border transition-colors cursor-pointer rounded-none",
-                selectedKampus === kp
-                  ? "border-primary bg-primary text-primary-foreground font-medium"
-                  : "border-border bg-background hover:bg-muted text-muted-foreground"
-              )}
-            >
-              {kp}
-            </button>
-          ))}
-
-          {/* Toggle Khusus Lab vs Semua Ruangan (hanya tampil di tab Terpakai dan Jeda Kosong, disembunyikan di Matriks Ruangan) */}
-          {activeTab !== "matriks" && (
-            <>
-              <div className="h-4 w-px bg-border mx-0.5 hidden sm:block" />
-
+          <div className="hidden sm:flex sm:items-center sm:gap-2">
+            <div className="h-4 w-px bg-border mx-0.5" />
+            {["Semua", "Kampus Thehok", "Kampus Kobar"].map((kp) => (
               <button
+                key={kp}
                 type="button"
-                onClick={() => setFilterType(filterType === "lab_only" ? "all" : "lab_only")}
+                onClick={() => setSelectedKampus(kp)}
+                aria-pressed={selectedKampus === kp}
                 className={cn(
-                  "px-2 sm:px-2.5 py-1 text-xs border transition-colors cursor-pointer flex items-center gap-1 rounded-none",
-                  filterType === "lab_only"
-                    ? "border-primary/60 bg-primary/10 text-primary font-medium"
-                    : "border-border bg-background text-muted-foreground hover:bg-muted"
+                  "px-2.5 py-1 text-xs border transition-colors cursor-pointer rounded-none",
+                  selectedKampus === kp
+                    ? "border-primary bg-primary text-primary-foreground font-medium"
+                    : "border-border bg-background hover:bg-muted text-muted-foreground"
                 )}
               >
-                <Layers className="size-3" />
-                {filterType === "lab_only" ? "Khusus Lab" : "Semua Ruangan"}
+                {kp}
               </button>
-            </>
-          )}
+            ))}
+
+            {activeTab !== "matriks" && (
+              <>
+                <div className="h-4 w-px bg-border mx-0.5" />
+                <button
+                  type="button"
+                  onClick={() => setFilterType(filterType === "lab_only" ? "all" : "lab_only")}
+                  className={cn(
+                    "px-2.5 py-1 text-xs border transition-colors cursor-pointer flex items-center gap-1 rounded-none",
+                    filterType === "lab_only"
+                      ? "border-primary/60 bg-primary/10 text-primary font-medium"
+                      : "border-border bg-background text-muted-foreground hover:bg-muted"
+                  )}
+                >
+                  <Layers className="size-3" />
+                  <span>{filterType === "lab_only" ? "Khusus Lab" : "Semua Ruangan"}</span>
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Input Pencarian Ruangan dengan tombol reset */}
@@ -696,7 +700,7 @@ export function AslabRoomMonitor({
             value={searchRoom}
             onChange={(e) => setSearchRoom(e.target.value)}
             placeholder="Cari ruang / matkul..."
-            className="pl-7 pr-7 h-8 sm:h-7 text-xs rounded-none"
+            className="pl-7 pr-7 h-7.5 sm:h-7 text-xs rounded-none"
           />
           {searchRoom && (
             <button
@@ -710,35 +714,83 @@ export function AslabRoomMonitor({
             </button>
           )}
         </div>
+
+        {/* Tombol Filter Kampus & Khusus Lab untuk tampilan mobile */}
+        <div className="flex sm:hidden flex-col gap-1.5 pt-0.5">
+          {/* Baris 1: Filter 3 Kampus Berdampingan */}
+          <div className="grid grid-cols-3 gap-1.5 w-full">
+            {["Semua", "Kampus Thehok", "Kampus Kobar"].map((kp) => (
+              <button
+                key={kp}
+                type="button"
+                onClick={() => setSelectedKampus(kp)}
+                aria-pressed={selectedKampus === kp}
+                className={cn(
+                  "h-7.5 px-1 text-center text-xs border transition-colors cursor-pointer rounded-none truncate",
+                  selectedKampus === kp
+                    ? "border-primary bg-primary text-primary-foreground font-medium"
+                    : "border-border bg-background hover:bg-muted text-muted-foreground"
+                )}
+              >
+                {kp}
+              </button>
+            ))}
+          </div>
+
+          {/* Baris 2 (Di Bawah): Tombol Khusus Lab */}
+          {activeTab !== "matriks" && (
+            <button
+              type="button"
+              onClick={() => setFilterType(filterType === "lab_only" ? "all" : "lab_only")}
+              className={cn(
+                "w-full h-7.5 px-2.5 text-xs border transition-colors cursor-pointer flex items-center justify-center gap-1.5 rounded-none font-medium",
+                filterType === "lab_only"
+                  ? "border-primary/60 bg-primary/10 text-primary"
+                  : "border-border bg-background text-muted-foreground hover:bg-muted"
+              )}
+            >
+              <Layers className="size-3.5 shrink-0" />
+              <span>{filterType === "lab_only" ? "Khusus Lab" : "Semua Ruangan"}</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* KONTEN TAB 1: CARD RUANG TERPAKAI (SINKRON DENGAN SCHEDULE-GRID.TSX) */}
       {activeTab === "terpakai" && (
         <div className="pt-4 space-y-6">
           {/* Quick Summary Pill Bar */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-            <div className="p-2.5 border border-border bg-muted/20">
-              <span className="text-muted-foreground text-[11px] block">Lab Sedang Berlangsung</span>
-              <span className="text-base font-bold text-emerald-600 dark:text-emerald-400">
-                {activeLabsNowCount} Lab Aktif
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2 text-xs">
+            <div className="p-2 sm:p-2.5 border border-border bg-muted/20">
+              <span className="text-muted-foreground text-[10px] sm:text-[11px] block truncate">
+                Lab Sedang Berlangsung
+              </span>
+              <span className="text-xs sm:text-sm font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5 block truncate">
+                <strong className="font-bold">{activeLabsNowCount}</strong> Lab Aktif
               </span>
             </div>
-            <div className="p-2.5 border border-border bg-muted/20">
-              <span className="text-muted-foreground text-[11px] block">Total Lab Terpakai Hari Ini</span>
-              <span className="text-base font-bold text-foreground">
-                {usedLabs.length} Sesi Lab
+            <div className="p-2 sm:p-2.5 border border-border bg-muted/20">
+              <span className="text-muted-foreground text-[10px] sm:text-[11px] block truncate">
+                Total Lab Terpakai Hari Ini
+              </span>
+              <span className="text-xs sm:text-sm font-semibold text-foreground mt-0.5 block truncate">
+                <strong className="font-bold">{usedLabs.length}</strong> Sesi Lab
               </span>
             </div>
-            <div className="p-2.5 border border-border bg-muted/20">
-              <span className="text-muted-foreground text-[11px] block">Ruang Kelas Teori Terpakai</span>
-              <span className="text-base font-bold text-foreground">
-                {usedTheoryRooms.length} Kelas
+            <div className="p-2 sm:p-2.5 border border-border bg-muted/20">
+              <span className="text-muted-foreground text-[10px] sm:text-[11px] block truncate">
+                Ruang Kelas Teori Terpakai
+              </span>
+              <span className="text-xs sm:text-sm font-semibold text-foreground mt-0.5 block truncate">
+                <strong className="font-bold">{usedTheoryRooms.length}</strong> Kelas
               </span>
             </div>
-            <div className="p-2.5 border border-border bg-muted/20">
-              <span className="text-muted-foreground text-[11px] block">Jeda Waktu Terbuka</span>
-              <span className="text-base font-bold text-primary">
-                {filteredGaps.length} Slot Kosong
+            <div className="p-2 sm:p-2.5 border border-border bg-muted/20">
+              <span className="text-muted-foreground text-[10px] sm:text-[11px] block truncate">
+                Jeda Waktu Terbuka
+              </span>
+              <span className="text-xs sm:text-sm font-semibold text-primary mt-0.5 block truncate">
+                <strong className="font-bold">{filteredGaps.length}</strong> Slot Kosong
               </span>
             </div>
           </div>
