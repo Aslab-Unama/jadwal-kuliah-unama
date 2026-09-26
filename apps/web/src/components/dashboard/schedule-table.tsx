@@ -146,26 +146,31 @@ export function ScheduleTable({
 
   return (
     <div className="overflow-hidden border border-border bg-card shadow-xs">
-      <div className="relative w-full">
-        <Table className="table-fixed w-full">
+      {/* Petunjuk swipe horizontal khusus mobile */}
+      <div className="sm:hidden flex items-center justify-between px-3 py-1.5 bg-muted/40 border-b border-border text-[11px] text-muted-foreground select-none">
+        <span>&larr; Geser ke samping untuk kolom lengkap &rarr;</span>
+      </div>
+
+      <div className="relative w-full overflow-x-auto">
+        <Table className="table-fixed w-full min-w-[760px]">
           <TableHeader className="bg-muted/40 border-b border-border">
             <TableRow className="hover:bg-transparent">
-              <TableHead className="pl-6 w-[15%] font-semibold text-xs text-foreground uppercase tracking-wider">
+              <TableHead className="pl-4 sm:pl-6 w-[120px] sm:w-[15%] min-w-[120px] font-semibold text-xs text-foreground uppercase tracking-wider">
                 Waktu
               </TableHead>
-              <TableHead className="w-[28%] font-semibold text-xs text-foreground uppercase tracking-wider">
+              <TableHead className="w-[220px] sm:w-[28%] min-w-[200px] font-semibold text-xs text-foreground uppercase tracking-wider">
                 Mata Kuliah
               </TableHead>
-              <TableHead className="w-[22%] font-semibold text-xs text-foreground uppercase tracking-wider">
+              <TableHead className="w-[160px] sm:w-[22%] min-w-[150px] font-semibold text-xs text-foreground uppercase tracking-wider">
                 Dosen
               </TableHead>
-              <TableHead className="w-[15%] font-semibold text-xs text-foreground uppercase tracking-wider">
+              <TableHead className="w-[120px] sm:w-[15%] min-w-[120px] font-semibold text-xs text-foreground uppercase tracking-wider">
                 Ruangan
               </TableHead>
-              <TableHead className="w-[12%] font-semibold text-xs text-foreground uppercase tracking-wider">
+              <TableHead className="w-[100px] sm:w-[12%] min-w-[100px] font-semibold text-xs text-foreground uppercase tracking-wider">
                 Status
               </TableHead>
-              <TableHead className="pr-6 w-[8%] font-semibold text-xs text-foreground uppercase tracking-wider">
+              <TableHead className="pr-4 sm:pr-6 w-[70px] sm:w-[8%] min-w-[70px] font-semibold text-xs text-foreground uppercase tracking-wider">
                 Metode
               </TableHead>
             </TableRow>
@@ -182,7 +187,7 @@ export function ScheduleTable({
                   onClick={() => onSelectItem(item)}
                 >
                   {/* Kolom 1: WAKTU */}
-                  <TableCell className="pl-6 py-3.5 align-top whitespace-normal">
+                  <TableCell className="pl-4 sm:pl-6 py-3.5 align-top whitespace-normal">
                     <div className="font-mono text-sm font-bold text-foreground">
                       {item.waktuMulai}
                     </div>
@@ -243,7 +248,7 @@ export function ScheduleTable({
                   </TableCell>
 
                   {/* Kolom 6: METODE */}
-                  <TableCell className="pr-6 py-3.5 whitespace-nowrap align-top">
+                  <TableCell className="pr-4 sm:pr-6 py-3.5 whitespace-nowrap align-top">
                     {realtime.method === "TM" && (
                       <Badge
                         variant="secondary"
