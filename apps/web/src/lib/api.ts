@@ -322,11 +322,14 @@ export async function fetchJadwalList(filters: JadwalFilters): Promise<JadwalApi
     }
 
     const json: JadwalApiResponse = await response.json();
+    if (json && Array.isArray(json.data)) {
+      json.data = json.data.filter((i) => i.waktuMulai && i.waktuMulai >= "08:00");
+    }
     return json;
   } catch (err) {
     console.warn("Menggunakan data fallback jadwal karena API tidak merespons:", err);
     // Saring data fallback sesuai filter aktif saat server API offline
-    let filtered = [...FALLBACK_ITEMS];
+    let filtered = FALLBACK_ITEMS.filter((i) => i.waktuMulai && i.waktuMulai >= "08:00");
 
     if (filters.tanggal && filters.tanggal !== "Semua") {
       filtered = filtered.filter((i) => i.tanggal === filters.tanggal);

@@ -319,8 +319,8 @@ export function getInUseRooms(
     currentMinutes = getGlobalMinutesWib();
   }
 
-  // Tampilkan seluruh jadwal hari ini (Tatap Muka, Online, maupun Batal)
-  const validItems = items.filter((item) => item.ruangan && item.waktuMulai);
+  // Tampilkan seluruh jadwal hari ini (Tatap Muka, Online, maupun Batal) yang dimulai minimal jam 08:00 WIB
+  const validItems = items.filter((item) => item.ruangan && item.waktuMulai && item.waktuMulai >= "08:00");
 
   const allTodayUsed: InUseRoomInfo[] = [];
   const activeNow: InUseRoomInfo[] = [];
@@ -373,7 +373,7 @@ export function calculateLabGaps(
   allKnownRooms: string[] = UNAMA_LABS,
   filterKampus?: string
 ): LabGapInfo[] {
-  const CAMPUS_START = timeToMinutes("07:30"); // 450 menit (07:30 WIB)
+  const CAMPUS_START = timeToMinutes("08:00"); // 480 menit (08:00 WIB) - Perkuliahan UNAMA dimulai minimal pukul 08:00
   const MIN_GAP_MINUTES = 30; // Jeda minimal 30 menit untuk dihitung kosong
 
   // Hitung jam lab terakhir selesai per kampus hari ini
@@ -400,12 +400,13 @@ export function calculateLabGaps(
       continue;
     }
 
-    // Seluruh jadwal di ruangan ini
+    // Seluruh jadwal di ruangan ini (hanya jadwal aktif mulai pukul 08:00 WIB ke atas)
     const allRoomItems = items
       .filter(
         (item) =>
           item.ruangan?.trim().toLowerCase() === room.trim().toLowerCase() &&
-          item.waktuMulai
+          item.waktuMulai &&
+          item.waktuMulai >= "08:00"
       )
       .sort((a, b) => timeToMinutes(a.waktuMulai) - timeToMinutes(b.waktuMulai));
 
@@ -438,7 +439,7 @@ export function calculateLabGaps(
         const durationMins = campusClose - CAMPUS_START;
         const totalJam = formatDuration(durationMins);
         const endTimeStr = minutesToTime(campusClose);
-        const text = `${room} kosong 07:30 - ${endTimeStr} (${totalJam})`;
+        const text = `${room} kosong 08:00 - ${endTimeStr} (${totalJam})`;
         const onlineInGap = getOnlineClassesInRange(CAMPUS_START, campusClose);
 
         gaps.push({
@@ -448,7 +449,7 @@ export function calculateLabGaps(
           isLabor,
           totalMenit: durationMins,
           totalJamText: totalJam,
-          waktuMulai: "07:30",
+          waktuMulai: "08:00",
           waktuSelesai: endTimeStr,
           tipeJeda: "seharian_kosong",
           onlineClasses: onlineInGap.length > 0 ? onlineInGap : undefined,
@@ -467,7 +468,7 @@ export function calculateLabGaps(
       const durationMins = effectiveFirstStart - CAMPUS_START;
       const totalJam = formatDuration(durationMins);
       const waktuSelesai = minutesToTime(effectiveFirstStart);
-      const text = `${room} kosong 07:30 - ${waktuSelesai} (${totalJam})`;
+      const text = `${room} kosong 08:00 - ${waktuSelesai} (${totalJam})`;
       const onlineInGap = getOnlineClassesInRange(CAMPUS_START, effectiveFirstStart);
 
       gaps.push({
@@ -477,7 +478,7 @@ export function calculateLabGaps(
         isLabor,
         totalMenit: durationMins,
         totalJamText: totalJam,
-        waktuMulai: "07:30",
+        waktuMulai: "08:00",
         waktuSelesai,
         tipeJeda: "sebelum_kelas",
         setelahKelas: {

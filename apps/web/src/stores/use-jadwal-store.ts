@@ -98,8 +98,13 @@ export const useJadwalStore = create<JadwalStoreState>((set, get) => {
       const res = await fetchJadwalList({ all: true, fresh });
 
       if (res.success && res.data) {
+        // Perkuliahan dimulai minimal pukul 08:00 WIB (jadwal sebelum jam 08:00 seperti 00:00 diabaikan)
+        const validData = res.data.filter(
+          (i) => i.waktuMulai && i.waktuMulai >= "08:00"
+        );
+
         set({
-          allSchedules: res.data,
+          allSchedules: validData,
           isLoading: false,
           isRefreshing: false,
           error: null,

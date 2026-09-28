@@ -135,9 +135,12 @@ export const app = new Elysia()
             conditions.push(ilike(jadwalLab.ruangan, `%${roomFilter}%`));
           }
 
+          // Perkuliahan dimulai minimal pukul 08:00 WIB (jadwal sebelum jam 08:00 diabaikan)
+          conditions.push(sql`${jadwalLab.waktuMulai} >= '08:00'`);
+
           const isAll = query.all === 'true' || query.all === '1';
           const isFresh = query.fresh === 'true' || query.fresh === '1';
-          const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+          const whereClause = and(...conditions);
 
           if (isAll) {
             // 1. Cek Multi-Layer Cache (L1 Memory / L2 Redis) jika tidak meminta fresh data
@@ -279,7 +282,10 @@ export const app = new Elysia()
             conditions.push(ilike(jadwalLab.ruangan, `%${roomFilter}%`));
           }
 
-          const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+          // Perkuliahan dimulai minimal pukul 08:00 WIB (jadwal sebelum jam 08:00 diabaikan)
+          conditions.push(sql`${jadwalLab.waktuMulai} >= '08:00'`);
+
+          const whereClause = and(...conditions);
 
           const [totalCount, campuses, rooms, statusCounts] = await Promise.all([
             db
