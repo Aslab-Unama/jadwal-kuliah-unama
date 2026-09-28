@@ -129,24 +129,24 @@ export function Header({ onRefresh, isRefreshing }: HeaderProps) {
               variant="outline"
               size="sm"
               onClick={handleLogout}
-              className="h-8 w-8 p-0 sm:h-9 sm:w-auto sm:px-2.5 sm:gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/10 cursor-pointer"
+              className="h-8 px-2 sm:h-9 sm:px-2.5 gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/10 cursor-pointer text-xs"
               aria-label="Keluar dari sesi Aslab"
               title="Keluar Aslab"
             >
-              <LogOut className="size-3.5" />
-              <span className="hidden sm:inline">Keluar Aslab</span>
+              <LogOut className="size-3.5 shrink-0" />
+              <span>Keluar Aslab</span>
             </Button>
           ) : (
             <a href="/login">
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 w-8 p-0 sm:h-9 sm:w-auto sm:px-2.5 sm:gap-1.5 cursor-pointer"
+                className="h-8 px-2 sm:h-9 sm:px-2.5 gap-1.5 cursor-pointer text-xs"
                 aria-label="Masuk sebagai Asisten Lab"
                 title="Login Aslab"
               >
-                <Lock className="size-3.5" />
-                <span className="hidden sm:inline">Login Aslab</span>
+                <Lock className="size-3.5 shrink-0" />
+                <span>Login Aslab</span>
               </Button>
             </a>
           )}
