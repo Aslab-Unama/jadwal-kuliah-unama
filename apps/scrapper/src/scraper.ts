@@ -4,15 +4,31 @@ import type { ScrapedScheduleItem, ScrapePageResult } from './types';
 const BASE_URL = process.env.BAAK_URL || 'https://baak.unama.ac.id/jadwal-kuliah';
 
 /**
+ * Mendapatkan tanggal hari ini dalam format YYYY-MM-DD sesuai zona waktu WIB (Asia/Jakarta)
+ */
+export function getTodayDateWIB(): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Jakarta',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+}
+
+/**
  * Scrape satu halaman jadwal perkuliahan dari BAAK UNAMA
  * @param page Nomor halaman (default: 1)
  * @param ruang Filter ruang kelas ('', 'labor', 'teori'. Default: '' untuk semua kelas)
+ * @param tanggal Filter tanggal perkuliahan ('YYYY-MM-DD'. Default: '' untuk semua tanggal)
  */
-export async function scrapeLabSchedulePage(page = 1, ruang = ''): Promise<ScrapePageResult> {
+export async function scrapeLabSchedulePage(page = 1, ruang = '', tanggal = ''): Promise<ScrapePageResult> {
   const targetUrl = new URL(BASE_URL);
   targetUrl.searchParams.set('search', '1');
   if (ruang) {
     targetUrl.searchParams.set('ruang', ruang);
+  }
+  if (tanggal) {
+    targetUrl.searchParams.set('tanggal', tanggal);
   }
   targetUrl.searchParams.set('page', page.toString());
   const url = targetUrl.toString();
@@ -56,9 +72,17 @@ export async function scrapeLabSchedulePage(page = 1, ruang = ''): Promise<Scrap
   // Hitung total halaman dari link pagination
   let maxPageFound = 1;
   $('ul.pagination a.page-link').each((_, el) => {
-    const pageNum = parseInt($(el).text().trim(), 10);
-    if (!isNaN(pageNum) && pageNum > maxPageFound) {
-      maxPageFound = pageNum;
+    const textNum = parseInt($(el).text().trim(), 10);
+    if (!isNaN(textNum) && textNum > maxPageFound) {
+      maxPageFound = textNum;
+    }
+    const href = $(el).attr('href') || '';
+    const match = href.match(/page=(\d+)/);
+    if (match) {
+      const hrefPage = parseInt(match[1], 10);
+      if (!isNaN(hrefPage) && hrefPage > maxPageFound) {
+        maxPageFound = hrefPage;
+      }
     }
   });
 

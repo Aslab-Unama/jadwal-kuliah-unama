@@ -4,7 +4,9 @@
   "main": "src/index.ts",
   "scripts": {
     "test": "bun run src/index.ts --test",
+    "test:today": "bun run src/index.ts --test --today",
     "sync": "bun run src/index.ts --sync",
+    "sync:today": "bun run src/index.ts --sync --today",
     "sync:fresh": "bun run src/index.ts --sync --clean"
   },
   "dependencies": {
