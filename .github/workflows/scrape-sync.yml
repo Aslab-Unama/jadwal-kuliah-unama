@@ -31,7 +31,10 @@ concurrency:
 jobs:
   scrape-and-sync-full:
     name: Scrape & Upsert Seluruh Jadwal Semester ke Supabase
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
+    defaults:
+      run:
+        shell: bash
     timeout-minutes: 15
 
     steps:
