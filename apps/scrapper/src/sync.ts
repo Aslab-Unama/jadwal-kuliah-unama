@@ -1,6 +1,84 @@
 import { db, jadwalLab, sql } from '@jadwal/db';
 import type { ScrapedScheduleItem } from './types';
 
+const courseAliases: Record<string, number> = {
+  'toefl': 2,
+  'pemrograman database': 3,
+  'pengantar audit sistem informasi': 3,
+  'jaringan dan komunikasi data': 3,
+  'komputer dan masyarakat': 2,
+  'sistem terdistribusi': 3,
+  'inovasi sistem informasi di organisasi dan masyarakat': 2,
+  'pemasaran internasional': 3,
+  'pemasaran jasa': 3,
+  'akuntansi keuangan': 3,
+  'perencanaan bisnis dan simulasi': 3,
+  'laboratorium kewirausahaan 2 (k5)': 2,
+  'manajemen bisnis dan simulasi manajemen bisnis': 3,
+  'manajemen pengembangan produk': 3,
+  'manajemen tim kreatif': 3,
+  'mekatronika': 3,
+  'perbankan': 3,
+  'proses bisnis': 3,
+  'seni pentas dan penampilan': 2,
+  'tata letak dan pengelolaan produk': 3,
+};
+
+function calculateWaktuSelesai(waktuMulai: string, sks: number): string {
+  if (waktuMulai === '00:00') return '00:00';
+  const [hStr, mStr] = waktuMulai.split(':');
+  const h = parseInt(hStr, 10);
+  const m = parseInt(mStr, 10);
+  if (isNaN(h) || isNaN(m)) return waktuMulai;
+  const totalMins = h * 60 + m + sks * 50;
+  const endH = Math.floor(totalMins / 60) % 24;
+  const endM = totalMins % 60;
+  return `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+}
+
+let mataKuliahCache: Map<string, number> | null = null;
+async function getSksForCourse(kodeKelas: string, mataKuliah: string): Promise<number> {
+  const normMk = mataKuliah.trim().toLowerCase();
+  if (courseAliases[normMk]) return courseAliases[normMk];
+
+  if (!mataKuliahCache) {
+    mataKuliahCache = new Map();
+    try {
+      const allMk = await db.select({
+        mataKuliah: sql<string>`lower(trim(mata_kuliah))`,
+        jurusan: sql<string>`jurusan`,
+        sks: sql<number>`sks`,
+      }).from(sql`mata_kuliah`);
+      for (const m of allMk) {
+        mataKuliahCache.set(`${m.mataKuliah}__${m.jurusan}`, m.sks);
+        if (!mataKuliahCache.has(m.mataKuliah)) {
+          mataKuliahCache.set(m.mataKuliah, m.sks);
+        }
+      }
+    } catch {
+      // fallback
+    }
+  }
+
+  const prodiChar = kodeKelas.length >= 4 ? kodeKelas[3].toUpperCase() : '';
+  const prodiMap: Record<string, string> = {
+    'T': 'Teknik Informatika',
+    'S': 'Sistem Informasi',
+    'K': 'Sistem Komputer',
+    'W': 'Kewirausahaan',
+    'B': 'Bisnis Digital',
+    'M': 'Manajemen',
+  };
+  const jurusan = prodiMap[prodiChar];
+  if (jurusan && mataKuliahCache.has(`${normMk}__${jurusan}`)) {
+    return mataKuliahCache.get(`${normMk}__${jurusan}`)!;
+  }
+  if (mataKuliahCache.has(normMk)) {
+    return mataKuliahCache.get(normMk)!;
+  }
+  return 2;
+}
+
 /**
  * Menyimpan atau memperbarui data jadwal ke database Supabase dengan:
  * 1. In-memory deduplication & merger (misal: team-teaching 2 dosen di kelas & jam yang sama)
@@ -27,10 +105,15 @@ export async function syncScheduleToDatabase(items: ScrapedScheduleItem[]): Prom
         existing.status = item.status;
       }
     } else {
+      const sks = await getSksForCourse(item.kodeKelas, item.mataKuliah);
+      const waktuSelesai = calculateWaktuSelesai(item.waktuMulai, sks);
+
       deduplicatedMap.set(key, {
         hari: item.hari,
         tanggal: item.tanggal,
         waktuMulai: item.waktuMulai,
+        waktuSelesai,
+        sks,
         dosen: item.dosen,
         kodeKelas: item.kodeKelas,
         mataKuliah: item.mataKuliah,
@@ -62,6 +145,8 @@ export async function syncScheduleToDatabase(items: ScrapedScheduleItem[]): Prom
           dosen: sql`EXCLUDED.dosen`,
           mataKuliah: sql`EXCLUDED.mata_kuliah`,
           kampus: sql`EXCLUDED.kampus`,
+          sks: sql`EXCLUDED.sks`,
+          waktuSelesai: sql`EXCLUDED.waktu_selesai`,
           updatedAt: new Date(),
         },
       });
@@ -90,6 +175,8 @@ export async function syncScheduleToDatabase(items: ScrapedScheduleItem[]): Prom
               dosen: sql`EXCLUDED.dosen`,
               mataKuliah: sql`EXCLUDED.mata_kuliah`,
               kampus: sql`EXCLUDED.kampus`,
+              sks: sql`EXCLUDED.sks`,
+              waktuSelesai: sql`EXCLUDED.waktu_selesai`,
               updatedAt: new Date(),
             },
           });

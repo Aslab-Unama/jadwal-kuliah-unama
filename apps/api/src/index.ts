@@ -171,6 +171,8 @@ export const app = new Elysia()
                 kampus: jadwalLab.kampus,
                 ruangan: jadwalLab.ruangan,
                 status: jadwalLab.status,
+                sks: jadwalLab.sks,
+                waktuSelesai: jadwalLab.waktuSelesai,
               })
               .from(jadwalLab)
               .where(whereClause)
