@@ -206,8 +206,10 @@ Perintah-perintah berikut dapat dijalankan dari root direktori proyek:
 | `bun run dev:api` | Menjalankan backend API ElysiaJS (`apps/api`) dengan auto-reload |
 | `bun run dev:web` | Menjalankan frontend Next.js (`apps/web`) pada port 3000 |
 | `bun run start:api` | Menjalankan backend API ElysiaJS untuk lingkungan produksi |
-| `bun run scrape:test` | Menguji scraping halaman 1 BAAK tanpa menyimpan ke database |
+| `bun run scrape:test` | Menguji scraping jadwal BAAK (seluruh semester) tanpa menyimpan ke database |
+| `bun run scrape:test:today` | Menguji scraping jadwal BAAK khusus hari ini tanpa menyimpan ke database |
 | `bun run scrape:sync` | Mengambil seluruh data jadwal dari BAAK dan menyimpannya ke database |
+| `bun run scrape:today` | Mengambil data jadwal khusus hari ini dari BAAK (super cepat) dan menyinkronkannya ke database |
 | `bun run scrape:fresh` | Mengosongkan data lama di tabel database lalu melakukan sinkronisasi ulang |
 | `bun run db:push` | Menerapkan perubahan skema Drizzle langsung ke database PostgreSQL |
 | `bun run db:studio` | Membuka antarmuka Drizzle Studio di browser untuk inspeksi data tabel |
@@ -241,3 +243,13 @@ Repository menyediakan `Dockerfile` berbasis `oven/bun:1-alpine` dan blueprint `
 Frontend Next.js di direktori `apps/web` dapat di-deploy secara terpisah ke platform hosting seperti Vercel:
 - Root directory konfigurasi deployment diatur ke `apps/web`.
 - Tambahkan variabel lingkungan `NEXT_PUBLIC_API_URL` yang mengarah ke domain backend API yang telah aktif.
+
+### GitHub Actions (Otomasi Scraping CI/CD)
+Terdapat 2 workflow GitHub Actions untuk menjaga data jadwal tetap akurat:
+1. **Sync Jadwal BAAK (Hari Ini / Tiap 10 Menit)** (`.github/workflows/scrape-today.yml`):
+   - Berjalan terjadwal setiap 10 menit (`*/10 * * * *`).
+   - Melakukan scraping khusus jadwal hari ini (WIB) sehingga cepat (~1-2 detik) dan hemat sumber daya.
+2. **Sync Jadwal BAAK (Full Harian)** (`.github/workflows/scrape-sync.yml`):
+   - Berjalan terjadwal setiap hari pukul 00:00 WIB (`0 17 * * *`).
+   - Melakukan sinkronisasi menyeluruh ke seluruh jadwal semester.
+

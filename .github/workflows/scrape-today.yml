@@ -1,8 +1,8 @@
-name: Sync Jadwal BAAK (Full Harian)
-run-name: Sinkronisasi Penuh Jadwal BAAK UNAMA oleh @${{ github.actor }}
+name: Sync Jadwal BAAK (Hari Ini / Tiap 10 Menit)
+run-name: Quick Sync Jadwal Hari Ini oleh @${{ github.actor }}
 
 on:
-  # Tombol manual di tab Actions GitHub (bisa dipicu kapan saja)
+  # Tombol manual di tab Actions GitHub
   workflow_dispatch:
     inputs:
       filter_ruang:
@@ -14,25 +14,25 @@ on:
           - all
           - labor
           - teori
-      clean_db:
-        description: 'Bersihkan data lama di database sebelum sync (Fresh Sync)?'
+      custom_date:
+        description: 'Tanggal Kustom YYYY-MM-DD (Kosongkan untuk otomatis tanggal hari ini WIB)'
         required: false
-        default: false
-        type: boolean
+        default: ''
+        type: string
 
-  # Jadwal otomatis harian setiap pukul 00:00 WIB (17:00 UTC)
+  # Jadwal otomatis setiap 10 menit
   schedule:
-    - cron: '0 17 * * *'
+    - cron: '*/10 * * * *'
 
 concurrency:
-  group: sync-baak-full
+  group: sync-baak-today
   cancel-in-progress: true
 
 jobs:
-  scrape-and-sync-full:
-    name: Scrape & Upsert Seluruh Jadwal Semester ke Supabase
+  scrape-and-sync-today:
+    name: Scrape & Upsert Jadwal Hari Ini ke Supabase
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 5
 
     steps:
       - name: 📥 Checkout Repository
@@ -46,7 +46,7 @@ jobs:
       - name: 📦 Install Dependencies
         run: bun install --frozen-lockfile
 
-      - name: 🚀 Jalankan Full Scrapper Sync
+      - name: ⚡ Jalankan Optimized Scrapper Sync (Hari Ini)
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
@@ -55,13 +55,20 @@ jobs:
           UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
         run: |
           FLAGS="--sync"
+          
+          # Cek parameter tanggal
+          if [ -n "${{ github.event.inputs.custom_date }}" ]; then
+            FLAGS="$FLAGS --date ${{ github.event.inputs.custom_date }}"
+          else
+            FLAGS="$FLAGS --today"
+          fi
+          
+          # Cek parameter ruang
           if [ "${{ github.event.inputs.filter_ruang }}" = "labor" ]; then
             FLAGS="$FLAGS --labor"
           elif [ "${{ github.event.inputs.filter_ruang }}" = "teori" ]; then
             FLAGS="$FLAGS --teori"
           fi
-          if [ "${{ github.event.inputs.clean_db }}" = "true" ]; then
-            FLAGS="$FLAGS --clean"
-          fi
+          
           echo "Menjalankan: bun apps/scrapper/src/index.ts $FLAGS"
           bun apps/scrapper/src/index.ts $FLAGS
