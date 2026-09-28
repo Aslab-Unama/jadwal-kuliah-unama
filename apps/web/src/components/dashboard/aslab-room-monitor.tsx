@@ -246,8 +246,8 @@ export function AslabRoomMonitor({
   onSelectItem,
   className,
 }: AslabRoomMonitorProps) {
-  // Mode tampilan: "terpakai" (In-Use Cards) vs "jeda_kosong" (Empty Gaps) vs "matriks" (Matrix Grid)
-  const [activeTab, setActiveTab] = React.useState<"terpakai" | "jeda_kosong" | "matriks">("terpakai");
+  // Mode tampilan: "matriks" (Matrix Grid) vs "terpakai" (In-Use Cards) vs "jeda_kosong" (Empty Gaps)
+  const [activeTab, setActiveTab] = React.useState<"terpakai" | "jeda_kosong" | "matriks">("matriks");
   const [selectedKampus, setSelectedKampus] = React.useState<string>(globalKampus || "Semua");
   const [filterType, setFilterType] = React.useState<"all" | "lab_only">("lab_only");
   const [searchRoom, setSearchRoom] = React.useState<string>("");
@@ -598,6 +598,23 @@ export function AslabRoomMonitor({
           )}
 
           <Button
+            variant={activeTab === "matriks" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setActiveTab("matriks")}
+            className={cn(
+              "h-7.5 sm:h-8 px-1 sm:px-3 gap-1 sm:gap-1.5 cursor-pointer text-[11px] sm:text-xs rounded-none justify-center transition-colors font-semibold",
+              activeTab === "matriks"
+                ? "bg-primary text-primary-foreground hover:bg-primary/90 border-transparent"
+                : "border-blue-500/40 text-blue-700 dark:text-blue-300 hover:bg-blue-500/10"
+            )}
+          >
+            <LayoutGrid className={cn("size-3 sm:size-3.5 shrink-0", activeTab === "matriks" ? "text-primary-foreground" : "text-blue-600 dark:text-blue-400")} />
+            <span className="truncate">
+              Matriks<span className="hidden sm:inline"> Ruangan</span>
+            </span>
+          </Button>
+
+          <Button
             variant={activeTab === "terpakai" ? "default" : "outline"}
             size="sm"
             onClick={() => setActiveTab("terpakai")}
@@ -623,23 +640,6 @@ export function AslabRoomMonitor({
             <Timer className={cn("size-3 sm:size-3.5 shrink-0", activeTab === "jeda_kosong" ? "text-primary-foreground" : "text-emerald-600 dark:text-emerald-400")} />
             <span className="truncate">
               <span className="hidden sm:inline">Cek </span>Jeda<span className="hidden sm:inline"> &amp; Ruang Kosong</span> ({filteredGaps.length})
-            </span>
-          </Button>
-
-          <Button
-            variant={activeTab === "matriks" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setActiveTab("matriks")}
-            className={cn(
-              "h-7.5 sm:h-8 px-1 sm:px-3 gap-1 sm:gap-1.5 cursor-pointer text-[11px] sm:text-xs rounded-none justify-center transition-colors font-semibold",
-              activeTab === "matriks"
-                ? "bg-primary text-primary-foreground hover:bg-primary/90 border-transparent"
-                : "border-blue-500/40 text-blue-700 dark:text-blue-300 hover:bg-blue-500/10"
-            )}
-          >
-            <LayoutGrid className={cn("size-3 sm:size-3.5 shrink-0", activeTab === "matriks" ? "text-primary-foreground" : "text-blue-600 dark:text-blue-400")} />
-            <span className="truncate">
-              Matriks<span className="hidden sm:inline"> Ruangan</span>
             </span>
           </Button>
         </div>
@@ -1584,9 +1584,12 @@ export function AslabRoomMonitor({
                       const absoluteIdx = offset + idx;
                       const prevCls = absoluteIdx > 0 ? sortedModalClasses[absoluteIdx - 1] : null;
                       const isSameDay = !prevCls?.tanggal || !cls.tanggal || prevCls.tanggal === cls.tanggal;
+                      const isFirstClassOfDay = !prevCls || !isSameDay;
                       const prevStart = prevCls ? timeToMinutes(prevCls.waktuMulai) : 0;
                       const prevEnd = prevStart + 100;
                       const curStart = timeToMinutes(cls.waktuMulai);
+                      const curEnd = curStart + 100;
+                      const waktuSelesai = minutesToTime(curEnd);
                       const gapMinutes = prevCls && isSameDay ? curStart - prevEnd : 0;
                       const isCurrentBreak =
                         gapMinutes > 0 && currentMins >= prevEnd && currentMins < curStart;
@@ -1665,7 +1668,7 @@ export function AslabRoomMonitor({
                               <div className="flex flex-wrap items-center gap-2">
                                 <div className="flex items-center gap-1.5 font-mono text-xs sm:text-sm font-bold text-foreground bg-muted/60 px-2.5 py-1 border border-border rounded-none">
                                   <Clock className="size-3.5 text-primary shrink-0" />
-                                  <span>{cls.waktuMulai} WIB</span>
+                                  <span>{cls.waktuMulai} - {waktuSelesai} WIB</span>
                                 </div>
                                 {!selectedDate && (cls.hari || cls.tanggal) && (
                                   <div className="font-mono text-xs font-medium px-2 py-1 bg-muted/70 text-muted-foreground border border-border rounded-none">
@@ -1689,6 +1692,11 @@ export function AslabRoomMonitor({
                                 {realtime.isCancelled && (
                                   <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-destructive text-white font-mono text-[10px] sm:text-xs font-bold uppercase rounded-none">
                                     Cancel
+                                  </span>
+                                )}
+                                {realtime.isUpcoming && (
+                                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-blue-600 text-white font-mono text-[10px] sm:text-xs font-bold uppercase rounded-none">
+                                    {isFirstClassOfDay ? "Terjadwal" : "Terjadwal Berikutnya"}
                                   </span>
                                 )}
                               </div>
