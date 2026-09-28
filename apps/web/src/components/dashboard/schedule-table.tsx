@@ -201,15 +201,10 @@ export function ScheduleTable({
                     <div className="font-semibold text-sm text-foreground leading-snug break-words whitespace-normal">
                       {item.mataKuliah}
                     </div>
-                    <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                    <div className="mt-1">
                       <span className="font-mono text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                         (Kelas: {item.kodeKelas})
                       </span>
-                      {item.sks ? (
-                        <span className="font-mono text-[11px] font-medium px-1.5 py-0.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
-                          {item.sks} SKS
-                        </span>
-                      ) : null}
                     </div>
                   </TableCell>
 

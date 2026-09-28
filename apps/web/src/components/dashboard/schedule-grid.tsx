@@ -283,11 +283,6 @@ export function ScheduleGrid({
                     <div className="flex items-center font-mono text-[11px] font-bold px-2.5 py-0.5 bg-primary/10 text-primary border border-primary/30 dark:bg-primary/20 dark:border-primary/40">
                       <span className="tracking-wider">{item.kodeKelas}</span>
                     </div>
-                    {item.sks ? (
-                      <div className="flex items-center font-mono text-[11px] font-medium px-2 py-0.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30">
-                        <span>{item.sks} SKS</span>
-                      </div>
-                    ) : null}
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
                     <RealtimeStatusBadge

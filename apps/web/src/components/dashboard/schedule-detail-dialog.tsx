@@ -33,10 +33,9 @@ interface ScheduleDetailDialogProps {
 
 function getGoogleCalendarUrl(item: JadwalItem): string {
   const title = encodeURIComponent(`${item.mataKuliah} (${item.kodeKelas})`);
-  const sksInfo = item.sks ? ` (${item.sks} SKS)` : "";
   const timeRange = item.waktuSelesai && item.waktuSelesai !== "00:00" ? `${item.waktuMulai} - ${item.waktuSelesai}` : item.waktuMulai;
   const details = encodeURIComponent(
-    `Jadwal Kuliah UNAMA\nMata Kuliah: ${item.mataKuliah}\nKelas: ${item.kodeKelas}${sksInfo}\nDosen: ${item.dosen}\nWaktu: ${item.hari}, ${item.tanggal} jam ${timeRange} WIB\nRuangan: ${item.ruangan} (${item.kampus})`
+    `Jadwal Kuliah UNAMA\nMata Kuliah: ${item.mataKuliah}\nKelas: ${item.kodeKelas}\nDosen: ${item.dosen}\nWaktu: ${item.hari}, ${item.tanggal} jam ${timeRange} WIB\nRuangan: ${item.ruangan} (${item.kampus})`
   );
   const location = encodeURIComponent(`${item.ruangan}, ${item.kampus}, UNAMA`);
 
@@ -49,11 +48,10 @@ export function ScheduleDetailDialog({ item, onClose }: ScheduleDetailDialogProp
   const handleCopy = async () => {
     if (!item) return;
     const timeRange = item.waktuSelesai && item.waktuSelesai !== "00:00" ? `${item.waktuMulai} - ${item.waktuSelesai}` : item.waktuMulai;
-    const sksText = item.sks ? ` • ${item.sks} SKS` : "";
     const text = [
       `Jadwal Kuliah UNAMA`,
       `Mata Kuliah: ${item.mataKuliah}`,
-      `Kelas: ${item.kodeKelas}${sksText}`,
+      `Kelas: ${item.kodeKelas}`,
       `Dosen: ${item.dosen}`,
       `Waktu: ${item.hari}, ${item.tanggal} (${timeRange} WIB)`,
       `Lokasi: ${item.ruangan}, ${item.kampus}`,
@@ -80,11 +78,6 @@ export function ScheduleDetailDialog({ item, onClose }: ScheduleDetailDialogProp
                   <Badge variant="outline" className="font-mono text-xs font-semibold px-2 py-0.5 rounded-none">
                     {item.kodeKelas}
                   </Badge>
-                  {item.sks ? (
-                    <Badge variant="secondary" className="font-mono text-xs font-medium px-2 py-0.5 rounded-none bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30">
-                      {item.sks} SKS
-                    </Badge>
-                  ) : null}
                   <RealtimeStatusBadge
                     status={item.status}
                     waktuMulai={item.waktuMulai}
@@ -135,11 +128,6 @@ export function ScheduleDetailDialog({ item, onClose }: ScheduleDetailDialogProp
                     <p className="font-semibold text-foreground font-mono">
                       {item.waktuMulai}{item.waktuSelesai && item.waktuSelesai !== "00:00" ? ` - ${item.waktuSelesai}` : ""} WIB
                     </p>
-                    {item.sks ? (
-                      <p className="text-[11px] text-muted-foreground mt-0.5">
-                        {item.sks} SKS ({item.sks * 50} menit)
-                      </p>
-                    ) : null}
                   </div>
                 </div>
               </div>
