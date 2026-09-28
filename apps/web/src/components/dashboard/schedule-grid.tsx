@@ -273,29 +273,27 @@ export function ScheduleGrid({
                     : "border-border"
                 )}
               >
-                {/* Top Section: Kode Kelas (Atas), Status (Kanan), & Jam Kuliah (Bawah) */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center font-mono text-xs font-bold px-2.5 py-0.5 bg-primary/10 text-primary border border-primary/30 dark:bg-primary/20 dark:border-primary/40">
-                      <span className="tracking-wider">{item.kodeKelas}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <RealtimeStatusBadge
-                        status={item.status}
-                        waktuMulai={item.waktuMulai}
-                        waktuSelesai={item.waktuSelesai}
-                        sks={item.sks}
-                        tanggal={item.tanggal}
-                        currentMins={currentMins}
-                        className="text-[11px] px-2.5 py-0.5 h-auto"
-                      />
-                      <MethodBadge status={item.status} className="text-[11px] px-2 py-0.5 h-auto hidden sm:inline-flex" />
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-1.5 font-mono text-[11px] font-medium text-foreground bg-muted/60 px-2.5 py-0.5 border border-border w-fit">
+                {/* Header Row: Jam Kuliah (Kiri) sejajar dengan Kode Kelas & Metode (Kanan) */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 font-mono text-[11px] font-medium text-foreground bg-muted/60 px-2.5 py-1 border border-border">
                     <Clock className="size-3.5 text-muted-foreground shrink-0" />
                     <span>{item.waktuMulai}{item.waktuSelesai && item.waktuSelesai !== "00:00" ? ` - ${item.waktuSelesai}` : ""} WIB</span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {/* Badge Cancel khusus jika kelas dibatalkan */}
+                    {item.status?.toLowerCase().includes("cancel") || item.status?.toLowerCase().includes("batal") ? (
+                      <Badge variant="destructive" className="text-[11px] px-2.5 py-0.5 h-auto font-bold">
+                        Cancel
+                      </Badge>
+                    ) : null}
+
+                    {/* Kode Kelas di sisi kanan sejajar dengan jam */}
+                    <div className="flex items-center font-mono text-[11px] font-bold px-2.5 py-0.5 bg-primary/10 text-primary border border-primary/30 dark:bg-primary/20 dark:border-primary/40">
+                      <span className="tracking-wider">{item.kodeKelas}</span>
+                    </div>
+
+                    <MethodBadge status={item.status} className="text-[11px] px-2 py-0.5 h-auto" />
                   </div>
                 </div>
 
