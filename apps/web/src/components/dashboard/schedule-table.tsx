@@ -189,7 +189,7 @@ export function ScheduleTable({
                   {/* Kolom 1: WAKTU */}
                   <TableCell className="pl-4 sm:pl-6 py-3.5 align-top whitespace-normal">
                     <div className="font-mono text-sm font-bold text-foreground">
-                      {item.waktuMulai}
+                      {item.waktuMulai}{item.waktuSelesai && item.waktuSelesai !== "00:00" ? ` - ${item.waktuSelesai}` : ""}
                     </div>
                     <div className="text-xs text-muted-foreground mt-0.5 leading-snug">
                       {item.hari}, {item.tanggal}
@@ -201,10 +201,15 @@ export function ScheduleTable({
                     <div className="font-semibold text-sm text-foreground leading-snug break-words whitespace-normal">
                       {item.mataKuliah}
                     </div>
-                    <div className="mt-1">
+                    <div className="mt-1 flex items-center gap-1.5 flex-wrap">
                       <span className="font-mono text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                         (Kelas: {item.kodeKelas})
                       </span>
+                      {item.sks ? (
+                        <span className="font-mono text-[11px] font-medium px-1.5 py-0.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+                          {item.sks} SKS
+                        </span>
+                      ) : null}
                     </div>
                   </TableCell>
 
@@ -241,6 +246,8 @@ export function ScheduleTable({
                     <RealtimeStatusBadge
                       status={item.status}
                       waktuMulai={item.waktuMulai}
+                      waktuSelesai={item.waktuSelesai}
+                      sks={item.sks}
                       tanggal={item.tanggal}
                       currentMins={currentMins}
                       className="text-[11px] px-2 py-0.5"

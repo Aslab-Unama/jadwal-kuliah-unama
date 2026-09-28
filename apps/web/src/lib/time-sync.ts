@@ -286,9 +286,9 @@ export interface RealtimeScheduleStatusResult {
  * - Hari Mendatang: "Terjadwal"
  */
 export function getRealtimeScheduleStatus(
-  item: { status?: string; waktuMulai: string; tanggal?: string },
+  item: { status?: string; waktuMulai: string; waktuSelesai?: string | null; sks?: number | null; tanggal?: string },
   currentMinsOverride?: number,
-  durationMinutes = 100
+  durationMinutes?: number
 ): RealtimeScheduleStatusResult {
   const rawStatus = item.status || "";
   const s = rawStatus.toLowerCase();
@@ -322,7 +322,8 @@ export function getRealtimeScheduleStatus(
   const currentMins =
     currentMinsOverride !== undefined ? currentMinsOverride : getGlobalMinutesWib();
   const startMins = parseTimeToMinutes(item.waktuMulai);
-  const endMins = startMins + durationMinutes;
+  const effectiveDuration = durationMinutes ?? (item.sks ? item.sks * 50 : 100);
+  const endMins = item.waktuSelesai ? parseTimeToMinutes(item.waktuSelesai) : startMins + effectiveDuration;
 
   const isToday = isDateToday(item.tanggal);
   const isPast = isDatePast(item.tanggal);

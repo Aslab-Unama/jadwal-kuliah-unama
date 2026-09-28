@@ -273,21 +273,28 @@ export function ScheduleGrid({
                     : "border-border"
                 )}
               >
-                {/* Header Row: Jam Mulai, Kode Kelas, Status Realtime & Metode */}
+                {/* Header Row: Jam Mulai-Selesai, Kode Kelas, SKS, Status Realtime & Metode */}
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center flex-wrap gap-2">
                     <div className="flex items-center gap-1.5 font-mono text-[11px] font-medium text-foreground bg-muted/60 px-2.5 py-0.5 border border-border">
                       <Clock className="size-3.5 text-muted-foreground shrink-0" />
-                      <span>{item.waktuMulai} WIB</span>
+                      <span>{item.waktuMulai}{item.waktuSelesai && item.waktuSelesai !== "00:00" ? ` - ${item.waktuSelesai}` : ""} WIB</span>
                     </div>
                     <div className="flex items-center font-mono text-[11px] font-bold px-2.5 py-0.5 bg-primary/10 text-primary border border-primary/30 dark:bg-primary/20 dark:border-primary/40">
                       <span className="tracking-wider">{item.kodeKelas}</span>
                     </div>
+                    {item.sks ? (
+                      <div className="flex items-center font-mono text-[11px] font-medium px-2 py-0.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30">
+                        <span>{item.sks} SKS</span>
+                      </div>
+                    ) : null}
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
                     <RealtimeStatusBadge
                       status={item.status}
                       waktuMulai={item.waktuMulai}
+                      waktuSelesai={item.waktuSelesai}
+                      sks={item.sks}
                       tanggal={item.tanggal}
                       currentMins={currentMins}
                       className="text-[11px] px-2.5 py-0.5 h-auto"

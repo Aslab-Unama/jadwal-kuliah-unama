@@ -451,7 +451,9 @@ export function AslabRoomMonitor({
           // Hari Ini: Evaluasi realtime berdasarkan jam
           const liveClass = sorted.find((c) => {
             const s = timeToMinutes(c.waktuMulai);
-            return currentMins >= s && currentMins < s + 100;
+            const duration = c.sks ? c.sks * 50 : 100;
+            const end = c.waktuSelesai ? timeToMinutes(c.waktuSelesai) : s + duration;
+            return currentMins >= s && currentMins < end;
           });
 
           if (liveClass) {
@@ -463,7 +465,11 @@ export function AslabRoomMonitor({
             subtitleColor = "text-emerald-100";
           } else {
             const firstStart = timeToMinutes(sorted[0].waktuMulai);
-            const lastEnd = timeToMinutes(sorted[sorted.length - 1].waktuMulai) + 100;
+            const lastClass = sorted[sorted.length - 1];
+            const lastDuration = lastClass.sks ? lastClass.sks * 50 : 100;
+            const lastEnd = lastClass.waktuSelesai
+              ? timeToMinutes(lastClass.waktuSelesai)
+              : timeToMinutes(lastClass.waktuMulai) + lastDuration;
 
             if (currentMins < firstStart) {
               status = "terjadwal";
@@ -1586,10 +1592,18 @@ export function AslabRoomMonitor({
                       const isSameDay = !prevCls?.tanggal || !cls.tanggal || prevCls.tanggal === cls.tanggal;
                       const isFirstClassOfDay = !prevCls || !isSameDay;
                       const prevStart = prevCls ? timeToMinutes(prevCls.waktuMulai) : 0;
-                      const prevEnd = prevStart + 100;
+                      const prevDuration = prevCls?.sks ? prevCls.sks * 50 : 100;
+                      const prevEnd = prevCls
+                        ? prevCls.waktuSelesai
+                          ? timeToMinutes(prevCls.waktuSelesai)
+                          : prevStart + prevDuration
+                        : 0;
                       const curStart = timeToMinutes(cls.waktuMulai);
-                      const curEnd = curStart + 100;
-                      const waktuSelesai = minutesToTime(curEnd);
+                      const curDuration = cls.sks ? cls.sks * 50 : 100;
+                      const curEnd = cls.waktuSelesai
+                        ? timeToMinutes(cls.waktuSelesai)
+                        : curStart + curDuration;
+                      const waktuSelesai = cls.waktuSelesai || minutesToTime(curEnd);
                       const gapMinutes = prevCls && isSameDay ? curStart - prevEnd : 0;
                       const isCurrentBreak =
                         gapMinutes > 0 && currentMins >= prevEnd && currentMins < curStart;

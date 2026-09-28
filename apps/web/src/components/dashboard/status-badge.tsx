@@ -6,6 +6,8 @@ import { getRealtimeScheduleStatus } from "@/lib/time-sync";
 interface RealtimeStatusBadgeProps {
   status?: string;
   waktuMulai?: string;
+  waktuSelesai?: string | null;
+  sks?: number | null;
   tanggal?: string;
   currentMins?: number;
   className?: string;
@@ -21,12 +23,14 @@ interface RealtimeStatusBadgeProps {
 export function RealtimeStatusBadge({
   status,
   waktuMulai = "08:00",
+  waktuSelesai,
+  sks,
   tanggal,
   currentMins,
   className,
 }: RealtimeStatusBadgeProps) {
   const result = getRealtimeScheduleStatus(
-    { status, waktuMulai, tanggal },
+    { status, waktuMulai, waktuSelesai, sks, tanggal },
     currentMins
   );
 

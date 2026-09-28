@@ -12,6 +12,8 @@ export interface JadwalItem {
   kampus: string;
   ruangan: string;
   status: string;
+  sks?: number | null;
+  waktuSelesai?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }
