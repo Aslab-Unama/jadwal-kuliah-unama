@@ -54,6 +54,7 @@ export interface JadwalSummaryFilters {
 
 export interface JadwalFilters {
   all?: boolean;
+  fresh?: boolean;
   search?: string;
   hari?: string;
   tanggal?: string;

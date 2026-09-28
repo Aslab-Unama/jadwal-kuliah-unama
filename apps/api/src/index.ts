@@ -136,11 +136,12 @@ export const app = new Elysia()
           }
 
           const isAll = query.all === 'true' || query.all === '1';
+          const isFresh = query.fresh === 'true' || query.fresh === '1';
           const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
           if (isAll) {
-            // 1. Cek Multi-Layer Cache (L1 Memory / L2 Redis)
-            if (conditions.length === 0) {
+            // 1. Cek Multi-Layer Cache (L1 Memory / L2 Redis) jika tidak meminta fresh data
+            if (conditions.length === 0 && !isFresh) {
               const cached = await getCachedAllJadwal<any[]>();
               if (cached && Array.isArray(cached.data) && cached.data.length > 0) {
                 return {
@@ -226,6 +227,7 @@ export const app = new Elysia()
         {
           query: t.Object({
             all: t.Optional(t.String()),
+            fresh: t.Optional(t.String()),
             search: t.Optional(t.String()),
             hari: t.Optional(t.String()),
             tanggal: t.Optional(t.String()),

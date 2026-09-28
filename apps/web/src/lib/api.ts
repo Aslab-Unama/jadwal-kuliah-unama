@@ -286,6 +286,10 @@ export async function fetchJadwalList(filters: JadwalFilters): Promise<JadwalApi
       params.set("offset", offset.toString());
     }
 
+    if (filters.fresh) {
+      params.set("fresh", "true");
+    }
+
     if (filters.hari && filters.hari !== "Semua") {
       params.set("hari", filters.hari);
     }

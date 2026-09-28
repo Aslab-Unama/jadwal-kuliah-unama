@@ -16,7 +16,6 @@ async function clearRedisCache() {
       });
       if (res.ok) {
         console.log('⚡ Upstash Redis cache (jadwal:all_2026_ganjil) berhasil dibersihkan via REST API!');
-        return;
       }
     } catch (e: any) {
       console.warn('⚠️ Gagal membersihkan Upstash Redis via REST API:', e?.message);

@@ -28,7 +28,7 @@ export interface JadwalStoreState {
   isAslab: boolean;
 
   // Actions
-  fetchAllSchedules: (force?: boolean) => Promise<void>;
+  fetchAllSchedules: (force?: boolean, fresh?: boolean) => Promise<void>;
   setSelectedDate: (date: Date | null) => void;
   setFilters: (newFilters: Partial<JadwalFilters>) => void;
   resetFilters: () => void;
@@ -77,16 +77,16 @@ export const useJadwalStore = create<JadwalStoreState>((set, get) => {
    * Mengambil SELURUH data database jadwal sekaligus (1x request di awal).
    * Seluruh filter tanggal, kampus, ruangan, search, dll. diproses 100% di memori browser.
    */
-  fetchAllSchedules: async (force = false) => {
+  fetchAllSchedules: async (force = false, fresh = false) => {
     const { allSchedules } = get();
 
-    // Jika sudah ada data dan bukan force refresh, gunakan state yang ada (0 network request)
-    if (!force && allSchedules.length > 0) {
+    // Jika sudah ada data dan bukan force refresh atau fresh, gunakan state yang ada
+    if (!force && !fresh && allSchedules.length > 0) {
       set({ isLoading: false, error: null });
       return;
     }
 
-    if (force) {
+    if (force || fresh) {
       set({ isRefreshing: true });
     } else {
       set({ isLoading: true });
@@ -94,8 +94,8 @@ export const useJadwalStore = create<JadwalStoreState>((set, get) => {
     set({ error: null });
 
     try {
-      // Panggil backend dengan all: true (tanpa batasan limit pagination)
-      const res = await fetchJadwalList({ all: true });
+      // Panggil backend dengan all: true (sertakan fresh jika dipicu tombol perbarui)
+      const res = await fetchJadwalList({ all: true, fresh });
 
       if (res.success && res.data) {
         set({
@@ -183,10 +183,10 @@ export const useJadwalStore = create<JadwalStoreState>((set, get) => {
 
   /**
    * Tombol "Perbarui" / Muat Ulang:
-   * Menarik ulang (re-pull) seluruh isi database dari server backend ke state.
+   * Menarik ulang seluruh isi database dari server backend ke state dan memperbarui Redis & L1 cache.
    */
   refresh: async () => {
-    await get().fetchAllSchedules(true);
+    await get().fetchAllSchedules(true, true);
   },
 
   // --- In-Memory Selectors ---
