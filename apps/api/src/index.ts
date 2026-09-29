@@ -381,6 +381,41 @@ export const app = new Elysia()
           }),
         }
       )
+      .get(
+        '/jadwal/validate-class/:code',
+        async ({ params: { code }, set }) => {
+          const normalized = code.trim().toUpperCase();
+          const [found] = await db
+            .select({
+              kodeKelas: jadwalLab.kodeKelas,
+              mataKuliah: jadwalLab.mataKuliah,
+              dosen: jadwalLab.dosen,
+            })
+            .from(jadwalLab)
+            .where(ilike(jadwalLab.kodeKelas, normalized))
+            .limit(1);
+
+          if (!found) {
+            set.status = 404;
+            return {
+              success: false,
+              valid: false,
+              message: `Kelas "${normalized}" tidak ditemukan di database jadwal`,
+            };
+          }
+
+          return {
+            success: true,
+            valid: true,
+            data: found,
+          };
+        },
+        {
+          params: t.Object({
+            code: t.String(),
+          }),
+        }
+      )
       .post(
         '/auth/login',
         async ({ body, set }) => {
