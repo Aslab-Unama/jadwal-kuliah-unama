@@ -105,21 +105,30 @@ export const kurikulumPerubahan = pgTable('kurikulum_perubahan', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
-export const logNotifikasiPerubahan = pgTable('log_notifikasi_perubahan', {
-  idLog: serial('id_log').primaryKey(),
-  tanggalKuliah: varchar('tanggal_kuliah', { length: 50 }).notNull(),
-  jam: varchar('jam', { length: 20 }).notNull(),
-  idRuangan: integer('id_ruangan').notNull(),
-  namaMk: varchar('nama_mk', { length: 255 }).notNull(),
-  kelas: varchar('kelas', { length: 50 }).notNull(),
-  tipePerubahan: varchar('tipe_perubahan', { length: 50 }).notNull(),
-  ruangAsalTujuan: varchar('ruang_asal_tujuan', { length: 100 }),
-  noWaTujuan: varchar('no_wa_tujuan', { length: 50 }),
-  statusKirim: varchar('status_kirim', { length: 50 }).notNull(),
-  pesanTerkirim: text('pesan_terkirim'),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  fingerprintEvent: varchar('fingerprint_event', { length: 100 }),
-});
+export const logNotifikasiPerubahan = pgTable(
+  'log_notifikasi_perubahan',
+  {
+    idLog: serial('id_log').primaryKey(),
+    tanggalKuliah: varchar('tanggal_kuliah', { length: 50 }).notNull(),
+    hariKuliah: varchar('hari_kuliah', { length: 30 }),
+    jam: varchar('jam', { length: 30 }).notNull(),
+    ruangan: varchar('ruangan', { length: 100 }),
+    kampus: varchar('kampus', { length: 100 }),
+    namaMk: varchar('nama_mk', { length: 255 }).notNull(),
+    kelas: varchar('kelas', { length: 50 }).notNull(),
+    dosen: varchar('dosen', { length: 255 }),
+    statusLama: varchar('status_lama', { length: 50 }).notNull(),
+    statusBaru: varchar('status_baru', { length: 50 }).notNull(),
+    tipePerubahan: varchar('tipe_perubahan', { length: 50 }).notNull(), // 'ONLINE' | 'CANCEL'
+    statusKirim: varchar('status_kirim', { length: 50 }).default('PENDING').notNull(),
+    fingerprintEvent: varchar('fingerprint_event', { length: 255 }),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    sentAt: timestamp('sent_at'),
+  },
+  (table) => [
+    uniqueIndex('log_notifikasi_perubahan_fingerprint_idx').on(table.fingerprintEvent),
+  ]
+);
 
 export type JadwalLab = typeof jadwalLab.$inferSelect;
 export type NewJadwalLab = typeof jadwalLab.$inferInsert;

@@ -1,5 +1,5 @@
 import { scrapeLabSchedulePage, getTodayDateWIB } from './scraper';
-import { syncScheduleToDatabase } from './sync';
+import { syncScheduleToDatabase, syncStatusChangesToDatabase } from './sync';
 import { db, jadwalLab } from '@jadwal/db';
 
 export interface ScrapeSyncOptions {
@@ -160,3 +160,93 @@ export async function runScrapeSync(options: ScrapeSyncOptions = {}): Promise<Sc
     };
   }
 }
+
+export interface StatusChangeSyncResult {
+  success: boolean;
+  totalCancelFound: number;
+  totalOnlineFound: number;
+  totalChangesDetected: number;
+  updatedKelas: string[];
+  durationSeconds: number;
+  error?: string;
+}
+
+/**
+ * Menjalankan sinkronisasi khusus kelas Cancel & Online (Targeted Status Sync)
+ * Hanya mengambil ~2 halaman, waktu eksekusi < 1 detik.
+ * Mencocokkan dengan data lokal untuk mendeteksi perubahan dari Tatap Muka ke Online/Cancel.
+ */
+export async function runStatusChangeSync(
+  logFn: (msg: string) => void = console.log
+): Promise<StatusChangeSyncResult> {
+  const startTime = performance.now();
+  logFn('🔍 [StatusSync] Memulai sinkronisasi perubahan status (Cancel & Online)...');
+
+  try {
+    // 1. Scrape kelas berstatus Cancel (1-2 halaman)
+    const cancelPage = await scrapeLabSchedulePage(1, '', '', 'cancel');
+    const cancelItems = [...cancelPage.items];
+    if (cancelPage.totalPages > 1) {
+      for (let p = 2; p <= cancelPage.totalPages; p++) {
+        const nextP = await scrapeLabSchedulePage(p, '', '', 'cancel');
+        cancelItems.push(...nextP.items);
+      }
+    }
+
+    // 2. Scrape kelas berstatus Online (1-2 halaman)
+    const onlinePage = await scrapeLabSchedulePage(1, '', '', 'online');
+    const onlineItems = [...onlinePage.items];
+    if (onlinePage.totalPages > 1) {
+      for (let p = 2; p <= onlinePage.totalPages; p++) {
+        const nextP = await scrapeLabSchedulePage(p, '', '', 'online');
+        onlineItems.push(...nextP.items);
+      }
+    }
+
+    const allItems = [...cancelItems, ...onlineItems];
+    logFn(
+      `📋 [StatusSync] Ditemukan ${cancelItems.length} kelas Cancel & ${onlineItems.length} kelas Online.`
+    );
+
+    // 3. Cocokkan dengan database dan catat perubahan jika sebelumnya Tatap Muka
+    const summary = await syncStatusChangesToDatabase(allItems);
+
+    if (summary.totalChangesDetected > 0) {
+      logFn(
+        `⚡ [StatusSync] Terdeteksi ${summary.totalChangesDetected} perubahan status baru: ${summary.updatedKelas.join(
+          ', '
+        )}`
+      );
+      await clearRedisCache(logFn);
+    } else {
+      logFn('ℹ️ [StatusSync] Tidak ada perubahan status baru yang terdeteksi.');
+    }
+
+    const durationSeconds = parseFloat(
+      ((performance.now() - startTime) / 1000).toFixed(2)
+    );
+    return {
+      success: true,
+      totalCancelFound: cancelItems.length,
+      totalOnlineFound: onlineItems.length,
+      totalChangesDetected: summary.totalChangesDetected,
+      updatedKelas: summary.updatedKelas,
+      durationSeconds,
+    };
+  } catch (err: any) {
+    const durationSeconds = parseFloat(
+      ((performance.now() - startTime) / 1000).toFixed(2)
+    );
+    logFn(`❌ [StatusSync] Gagal: ${err?.message || err}`);
+    return {
+      success: false,
+      totalCancelFound: 0,
+      totalOnlineFound: 0,
+      totalChangesDetected: 0,
+      updatedKelas: [],
+      durationSeconds,
+      error: err?.message || String(err),
+    };
+  }
+}
+

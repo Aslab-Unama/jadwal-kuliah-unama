@@ -1,10 +1,10 @@
 import { Elysia, t } from 'elysia';
 import { cors } from '@elysiajs/cors';
-import { db, jadwalLab, eq, ilike, and, or, desc, asc, sql } from '@jadwal/db';
+import { db, jadwalLab, logNotifikasiPerubahan, eq, ilike, and, or, desc, asc, sql } from '@jadwal/db';
 import { httpLogger, log } from './logger';
 import { getCachedAllJadwal, setCachedAllJadwal, invalidateAllJadwalCache } from './redis';
 import { InMemoryRateLimiter } from './rate-limiter';
-import { triggerSyncToday, triggerSyncFull, getCronStatus, startCronScheduler } from './cron';
+import { triggerSyncToday, triggerSyncFull, triggerStatusChangeSync, getCronStatus, startCronScheduler } from './cron';
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
 const HOST = process.env.HOST || '0.0.0.0';
@@ -456,6 +456,70 @@ export const app = new Elysia()
           message: 'Cache Redis jadwal berhasil dibersihkan',
         };
       })
+      .group('/notifications', (notifGroup) =>
+        notifGroup
+          .get(
+            '/pending',
+            async ({ query }) => {
+              const limit = Math.min(query?.limit ? parseInt(query.limit, 10) : 50, 100);
+              const items = await db
+                .select()
+                .from(logNotifikasiPerubahan)
+                .where(eq(logNotifikasiPerubahan.statusKirim, 'PENDING'))
+                .orderBy(asc(logNotifikasiPerubahan.idLog))
+                .limit(limit);
+
+              return {
+                success: true,
+                total: items.length,
+                data: items,
+              };
+            },
+            {
+              query: t.Object({
+                limit: t.Optional(t.String()),
+              }),
+            }
+          )
+          .post(
+            '/:id/ack',
+            async ({ params: { id }, body, set }) => {
+              const status = (body as any)?.status || 'SENT';
+              const [updated] = await db
+                .update(logNotifikasiPerubahan)
+                .set({
+                  statusKirim: status,
+                  sentAt: new Date(),
+                })
+                .where(eq(logNotifikasiPerubahan.idLog, id))
+                .returning();
+
+              if (!updated) {
+                set.status = 404;
+                return {
+                  success: false,
+                  message: `Notifikasi dengan ID ${id} tidak ditemukan`,
+                };
+              }
+
+              return {
+                success: true,
+                message: `Notifikasi ID ${id} berhasil di-update menjadi ${status}`,
+                data: updated,
+              };
+            },
+            {
+              params: t.Object({
+                id: t.Numeric(),
+              }),
+              body: t.Optional(
+                t.Object({
+                  status: t.Optional(t.String()),
+                })
+              ),
+            }
+          )
+      )
       .group('/cron', (cronGroup) =>
         cronGroup
           // Otorisasi wajib menggunakan CRON_SECRET
@@ -489,6 +553,12 @@ export const app = new Elysia()
               success: true,
               data: getCronStatus(),
             };
+          })
+          .get('/sync-status', async () => {
+            return await triggerStatusChangeSync('api_endpoint_get');
+          })
+          .post('/sync-status', async () => {
+            return await triggerStatusChangeSync('api_endpoint_post');
           })
           .get('/sync-today', async () => {
             return await triggerSyncToday('api_endpoint_get');

@@ -1,15 +1,25 @@
 import { scrapeLabSchedulePage, getTodayDateWIB } from './scraper';
-import { syncScheduleToDatabase } from './sync';
-import { runScrapeSync, clearRedisCache, type ScrapeSyncOptions, type ScrapeSyncResult } from './sync-service';
+import { syncScheduleToDatabase, syncStatusChangesToDatabase } from './sync';
+import {
+  runScrapeSync,
+  runStatusChangeSync,
+  clearRedisCache,
+  type ScrapeSyncOptions,
+  type ScrapeSyncResult,
+  type StatusChangeSyncResult,
+} from './sync-service';
 
 export {
   runScrapeSync,
+  runStatusChangeSync,
   clearRedisCache,
   scrapeLabSchedulePage,
   syncScheduleToDatabase,
+  syncStatusChangesToDatabase,
   getTodayDateWIB,
   type ScrapeSyncOptions,
   type ScrapeSyncResult,
+  type StatusChangeSyncResult,
 };
 
 async function main() {
@@ -78,6 +88,14 @@ async function main() {
       console.log('   bun run sync\n');
     }
     return;
+  }
+
+  if (args.includes('--status')) {
+    const result = await runStatusChangeSync();
+    if (!result.success) {
+      process.exit(1);
+    }
+    process.exit(0);
   }
 
   if (isSync) {

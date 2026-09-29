@@ -21,7 +21,12 @@ export function getTodayDateWIB(): string {
  * @param ruang Filter ruang kelas ('', 'labor', 'teori'. Default: '' untuk semua kelas)
  * @param tanggal Filter tanggal perkuliahan ('YYYY-MM-DD'. Default: '' untuk semua tanggal)
  */
-export async function scrapeLabSchedulePage(page = 1, ruang = '', tanggal = ''): Promise<ScrapePageResult> {
+export async function scrapeLabSchedulePage(
+  page = 1,
+  ruang = '',
+  tanggal = '',
+  status = ''
+): Promise<ScrapePageResult> {
   const targetUrl = new URL(BASE_URL);
   targetUrl.searchParams.set('search', '1');
   if (ruang) {
@@ -29,6 +34,9 @@ export async function scrapeLabSchedulePage(page = 1, ruang = '', tanggal = ''):
   }
   if (tanggal) {
     targetUrl.searchParams.set('tanggal', tanggal);
+  }
+  if (status) {
+    targetUrl.searchParams.set('status', status);
   }
   targetUrl.searchParams.set('page', page.toString());
   const url = targetUrl.toString();

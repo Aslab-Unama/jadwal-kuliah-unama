@@ -1,4 +1,4 @@
-import { runScrapeSync, type ScrapeSyncResult } from '@jadwal/scrapper';
+import { runScrapeSync, runStatusChangeSync, type ScrapeSyncResult, type StatusChangeSyncResult } from '@jadwal/scrapper';
 import { invalidateAllJadwalCache } from './redis';
 import { log } from './logger';
 
@@ -76,6 +76,43 @@ export async function triggerSyncToday(source = 'manual') {
     };
   } catch (err: any) {
     log.error(`❌ [Cron] Error tak terduga saat sync hari ini: ${err?.message || err}`);
+    return {
+      success: false,
+      running: false,
+      error: err?.message || String(err),
+    };
+  } finally {
+    isSyncing = false;
+  }
+}
+
+/**
+ * Menjalankan sinkronisasi perubahan status (Cancel & Online) seluruh semester
+ * Ringan (< 1 detik, 2 request). Cocok dijalankan berkala tiap 5 menit.
+ */
+export async function triggerStatusChangeSync(source = 'manual') {
+  if (isSyncing) {
+    log.warn(`⚠️ [Cron] Status sync (${source}) dilewati karena proses sync lain sedang berjalan.`);
+    return {
+      success: false,
+      running: true,
+      message: 'Proses sinkronisasi sedang berjalan.',
+    };
+  }
+
+  isSyncing = true;
+  log.info(`🔍 [Cron] Memulai targeted status sync (Cancel & Online) (Sumber: ${source})...`);
+
+  try {
+    const result = await runStatusChangeSync((msg) => log.info(`[StatusSync] ${msg}`));
+    return {
+      success: result.success,
+      running: false,
+      result,
+      timestamp: new Date().toISOString(),
+    };
+  } catch (err: any) {
+    log.error(`❌ [Cron] Error tak terduga saat status sync: ${err?.message || err}`);
     return {
       success: false,
       running: false,
@@ -179,11 +216,18 @@ export function startCronScheduler() {
     return;
   }
 
-  log.info('⏰ Memulai internal cron scheduler (Sync Hari Ini tiap 10 menit & Full Sync tengah malam WIB)...');
+  log.info(
+    '⏰ Memulai internal cron scheduler (Status Change Sync tiap 5m, Sync Hari Ini tiap 10m & Full Sync tengah malam WIB)...'
+  );
 
-  // Jalankan sync pertama kali saat server baru menyala setelah jeda 10 detik
-  setTimeout(() => {
-    triggerSyncToday('startup_init').catch((e) => log.error(`Startup sync error: ${e}`));
+  // Jalankan status sync dan sync hari ini saat server baru menyala setelah jeda 10 detik
+  setTimeout(async () => {
+    try {
+      await triggerStatusChangeSync('startup_init');
+      await triggerSyncToday('startup_init');
+    } catch (e) {
+      log.error(`Startup sync error: ${e}`);
+    }
   }, 10_000);
 
   // Interval setiap 1 menit untuk mengecek jadwal
@@ -215,7 +259,13 @@ export function startCronScheduler() {
       return;
     }
 
-    // 2. Cek Sync Hari Ini Setiap 10 Menit
+    // 2. Cek Perubahan Status (Cancel & Online) Setiap 5 Menit
+    if (minuteCounter % 5 === 0) {
+      log.info(`🔍 Mengecek perubahan status jadwal perkuliahan (${nowWib})...`);
+      await triggerStatusChangeSync('interval_5m_scheduler');
+    }
+
+    // 3. Cek Sync Hari Ini Setiap 10 Menit
     if (minuteCounter >= 10) {
       minuteCounter = 0;
       log.info(`⏱️  Timer 10 menit tercapai (${nowWib}). Menjalankan Sync Jadwal Hari Ini...`);

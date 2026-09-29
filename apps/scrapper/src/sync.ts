@@ -1,4 +1,4 @@
-import { db, jadwalLab, sql } from '@jadwal/db';
+import { db, jadwalLab, logNotifikasiPerubahan, sql, and, eq } from '@jadwal/db';
 import type { ScrapedScheduleItem } from './types';
 
 const courseAliases: Record<string, number> = {
@@ -192,3 +192,118 @@ export async function syncScheduleToDatabase(items: ScrapedScheduleItem[]): Prom
     return successCount;
   }
 }
+
+export interface StatusChangeSyncSummary {
+  totalProcessed: number;
+  totalChangesDetected: number;
+  updatedKelas: string[];
+}
+
+/**
+ * Memproses daftar kelas berstatus CANCEL atau ONLINE dari BAAK:
+ * 1. Mencocokkan dengan data eksisting di tabel jadwal_lab_2026_ganjil
+ * 2. Jika sebelumnya statusnya Tatap Muka (TM) dan kini berubah:
+ *    - Update status di database Supabase (Early Update)
+ *    - Catat antrean notifikasi ke tabel log_notifikasi_perubahan (PENDING)
+ */
+export async function syncStatusChangesToDatabase(items: ScrapedScheduleItem[]): Promise<StatusChangeSyncSummary> {
+  let totalChanges = 0;
+  const updatedKelas: string[] = [];
+
+  for (const item of items) {
+    try {
+      const [existing] = await db
+        .select()
+        .from(jadwalLab)
+        .where(
+          and(
+            eq(jadwalLab.tanggal, item.tanggal),
+            eq(jadwalLab.waktuMulai, item.waktuMulai),
+            eq(jadwalLab.kodeKelas, item.kodeKelas),
+            eq(jadwalLab.mataKuliah, item.mataKuliah),
+            eq(jadwalLab.ruangan, item.ruangan)
+          )
+        )
+        .limit(1);
+
+      if (!existing) {
+        // Jika data jadwal belum pernah ada di database, simpan langsung
+        await syncScheduleToDatabase([item]);
+        continue;
+      }
+
+      const oldStatusLower = existing.status.toLowerCase();
+      const newStatusLower = item.status.toLowerCase();
+
+      // Cek apakah status lama adalah Tatap Muka (TM)
+      const isOldTatapMuka = oldStatusLower.includes('tm') || oldStatusLower.includes('tatap muka');
+
+      // Cek apakah status baru adalah Cancel atau Online
+      const isNewCancel = newStatusLower.includes('cancel') || newStatusLower.includes('batal');
+      const isNewOnline = newStatusLower.includes('ol') || newStatusLower.includes('online');
+
+      // Deteksi perubahan hanya jika status berubah dari Tatap Muka ke Cancel/Online
+      if (isOldTatapMuka && (isNewCancel || isNewOnline)) {
+        const tipePerubahan = isNewCancel ? 'CANCEL' : 'ONLINE';
+        const fingerprint = `${item.tanggal}__${item.waktuMulai}__${item.kodeKelas}__${item.ruangan}__TO__${tipePerubahan}`;
+
+        // 1. Early Update: langsung ubah status di tabel jadwal utama
+        await db
+          .update(jadwalLab)
+          .set({
+            status: item.status,
+            updatedAt: new Date(),
+          })
+          .where(eq(jadwalLab.id, existing.id));
+
+        // 2. Insert ke antrean notifikasi (idempotent dengan onConflictDoNothing)
+        const jamFormatted = existing.waktuSelesai
+          ? `${item.waktuMulai} - ${existing.waktuSelesai}`
+          : item.waktuMulai;
+
+        await db
+          .insert(logNotifikasiPerubahan)
+          .values({
+            tanggalKuliah: item.tanggal,
+            hariKuliah: item.hari,
+            jam: jamFormatted,
+            ruangan: item.ruangan,
+            kampus: item.kampus,
+            namaMk: item.mataKuliah,
+            kelas: item.kodeKelas,
+            dosen: item.dosen || existing.dosen,
+            statusLama: existing.status,
+            statusBaru: item.status,
+            tipePerubahan,
+            statusKirim: 'PENDING',
+            fingerprintEvent: fingerprint,
+          })
+          .onConflictDoNothing();
+
+        totalChanges++;
+        updatedKelas.push(`${item.kodeKelas} (${item.mataKuliah} - ${tipePerubahan})`);
+      } else if (existing.status !== item.status) {
+        // Jika status lain berubah, tetap update jadwal utama
+        await db
+          .update(jadwalLab)
+          .set({
+            status: item.status,
+            updatedAt: new Date(),
+          })
+          .where(eq(jadwalLab.id, existing.id));
+      }
+    } catch (err: any) {
+      console.error(
+        `❌ Gagal memproses perubahan status [${item.tanggal} ${item.waktuMulai} ${item.kodeKelas}]:`,
+        err?.message || err
+      );
+    }
+  }
+
+  return {
+    totalProcessed: items.length,
+    totalChangesDetected: totalChanges,
+    updatedKelas,
+  };
+}
+
