@@ -4,6 +4,7 @@ import { db, jadwalLab, eq, ilike, and, or, desc, asc, sql } from '@jadwal/db';
 import { httpLogger, log } from './logger';
 import { getCachedAllJadwal, setCachedAllJadwal, invalidateAllJadwalCache } from './redis';
 import { InMemoryRateLimiter } from './rate-limiter';
+import { triggerSyncToday, triggerSyncFull, getCronStatus, startCronScheduler } from './cron';
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
 const HOST = process.env.HOST || '0.0.0.0';
@@ -57,7 +58,8 @@ export const app = new Elysia()
     }
 
     // Rate limit umum untuk semua route API (30 req / menit)
-    if (url.pathname.startsWith('/api/')) {
+    // Kecualikan /api/cron agar trigger scheduler/Google Apps Script tidak pernah terblokir
+    if (url.pathname.startsWith('/api/') && !url.pathname.startsWith('/api/cron')) {
       const check = apiRateLimiter.check(clientIp);
       set.headers['X-RateLimit-Limit'] = '30';
       set.headers['X-RateLimit-Remaining'] = check.remaining.toString();
@@ -454,6 +456,55 @@ export const app = new Elysia()
           message: 'Cache Redis jadwal berhasil dibersihkan',
         };
       })
+      .group('/cron', (cronGroup) =>
+        cronGroup
+          // Otorisasi wajib menggunakan CRON_SECRET
+          .onBeforeHandle(({ request, set }) => {
+            const secret = process.env.CRON_SECRET;
+            if (!secret) {
+              set.status = 500;
+              return {
+                success: false,
+                error: 'ConfigurationError',
+                message: 'CRON_SECRET belum disetel di environment variable server.',
+              };
+            }
+
+            const url = new URL(request.url);
+            const queryKey = url.searchParams.get('key');
+            const authHeader = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
+            const xCronKey = request.headers.get('x-cron-key');
+
+            if (queryKey !== secret && authHeader !== secret && xCronKey !== secret) {
+              set.status = 401;
+              return {
+                success: false,
+                error: 'Unauthorized',
+                message: 'Kunci otorisasi cron (CRON_SECRET) tidak valid atau tidak disediakan.',
+              };
+            }
+          })
+          .get('/status', () => {
+            return {
+              success: true,
+              data: getCronStatus(),
+            };
+          })
+          .get('/sync-today', async () => {
+            return await triggerSyncToday('api_endpoint_get');
+          })
+          .post('/sync-today', async () => {
+            return await triggerSyncToday('api_endpoint_post');
+          })
+          .get('/sync-full', async ({ query }) => {
+            const cleanDb = query?.clean === 'true';
+            return await triggerSyncFull('api_endpoint_get', cleanDb);
+          })
+          .post('/sync-full', async ({ body }) => {
+            const cleanDb = (body as any)?.clean === true;
+            return await triggerSyncFull('api_endpoint_post', cleanDb);
+          })
+      )
   )
   .listen({
     port: PORT,
@@ -462,4 +513,8 @@ export const app = new Elysia()
 
 log.success(`🚀 ElysiaJS server is running at http://${app.server?.hostname}:${app.server?.port}`);
 
+// Jalankan background scheduler di dalam proses API Render
+startCronScheduler();
+
 export type App = typeof app;
+

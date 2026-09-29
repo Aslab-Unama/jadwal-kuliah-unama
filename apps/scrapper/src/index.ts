@@ -1,35 +1,16 @@
 import { scrapeLabSchedulePage, getTodayDateWIB } from './scraper';
 import { syncScheduleToDatabase } from './sync';
-import { db, jadwalLab } from '@jadwal/db';
+import { runScrapeSync, clearRedisCache, type ScrapeSyncOptions, type ScrapeSyncResult } from './sync-service';
 
-async function clearRedisCache() {
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-
-  if (url && token) {
-    try {
-      const endpoint = `${url.replace(/\/$/, '')}/del/jadwal:all_2026_ganjil`;
-      const res = await fetch(endpoint, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (res.ok) {
-        console.log('⚡ Upstash Redis cache (jadwal:all_2026_ganjil) berhasil dibersihkan via REST API!');
-      }
-    } catch (e: any) {
-      console.warn('⚠️ Gagal membersihkan Upstash Redis via REST API:', e?.message);
-    }
-  }
-
-  try {
-    const apiPort = process.env.PORT || 8000;
-    await fetch(`http://localhost:${apiPort}/api/cache/clear`, { method: 'POST' });
-    console.log('⚡ Cache Redis jadwal berhasil dibersihkan via local API endpoint!');
-  } catch {
-    // Abaikan jika server API belum menyala
-  }
-}
+export {
+  runScrapeSync,
+  clearRedisCache,
+  scrapeLabSchedulePage,
+  syncScheduleToDatabase,
+  getTodayDateWIB,
+  type ScrapeSyncOptions,
+  type ScrapeSyncResult,
+};
 
 async function main() {
   const args = process.argv.slice(2);
@@ -100,77 +81,25 @@ async function main() {
   }
 
   if (isSync) {
-    console.log(`📥 [SYNC MODE] Mengambil jadwal dan menyinkronkan ke Supabase...\n`);
+    const result = await runScrapeSync({
+      isToday,
+      customDate,
+      ruang: (ruangFilter as any) || 'all',
+      cleanDb: isClean,
+      pageLimit,
+    });
 
-    if (isClean) {
-      console.log('🗑️  Menghapus seluruh data jadwal lama dari database Supabase...');
-      await db.delete(jadwalLab);
-      console.log('✅ Data lama berhasil dikosongkan!\n');
+    if (!result.success) {
+      process.exit(1);
     }
-
-    // Ambil halaman pertama untuk mengetahui total halaman
-    console.log('⏳ Memeriksa total halaman...');
-    const firstPage = await scrapeLabSchedulePage(1, ruangFilter, tanggalFilter);
-    const maxPages = pageLimit ? Math.min(pageLimit, firstPage.totalPages) : firstPage.totalPages;
-
-    console.log(`📌 Terdeteksi total ${firstPage.totalPages} halaman (~${firstPage.totalClasses} kelas).`);
-
-    if (firstPage.totalClasses === 0) {
-      console.log('ℹ️ Tidak ada data jadwal yang perlu disinkronkan untuk kriteria ini.');
-      await clearRedisCache();
-      process.exit(0);
-    }
-
-    if (pageLimit) {
-      console.log(`⚠️ Limit dibatasi hingga ${maxPages} halaman pertama.\n`);
-    } else {
-      console.log(`🚀 Memproses semua ${maxPages} halaman...\n`);
-    }
-
-    let totalSynced = 0;
-
-    const BATCH_SIZE = 3;
-    for (let i = 1; i <= maxPages; i += BATCH_SIZE) {
-      const pageBatch = [];
-      for (let p = i; p < i + BATCH_SIZE && p <= maxPages; p++) {
-        pageBatch.push(p);
-      }
-
-      const results = await Promise.all(
-        pageBatch.map(async (page) => {
-          try {
-            const pageData = page === 1 ? firstPage : await scrapeLabSchedulePage(page, ruangFilter, tanggalFilter);
-            return { page, items: pageData.items, error: null };
-          } catch (err: any) {
-            return { page, items: [], error: err };
-          }
-        })
-      );
-
-      for (const res of results) {
-        if (res.error) {
-          console.error(`❌ Error di halaman ${res.page}:`, res.error);
-        } else {
-          const count = await syncScheduleToDatabase(res.items);
-          totalSynced += count;
-          console.log(`✅ Halaman ${res.page}/${maxPages}: sync ${count} baris.`);
-        }
-      }
-
-      if (i + BATCH_SIZE <= maxPages) {
-        await new Promise((r) => setTimeout(r, 200));
-      }
-    }
-
-    console.log(`\n🎉 Selesai! Total ${totalSynced} data jadwal berhasil disinkronkan ke Supabase.`);
-
-    await clearRedisCache();
-
     process.exit(0);
   }
 }
 
-main().catch((err) => {
-  console.error('❌ Terjadi kesalahan fatal:', err);
-  process.exit(1);
-});
+// Hanya jalankan main jika dipanggil langsung dari command line (CLI)
+if (import.meta.main) {
+  main().catch((err) => {
+    console.error('❌ Terjadi kesalahan fatal:', err);
+    process.exit(1);
+  });
+}
