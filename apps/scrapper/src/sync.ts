@@ -30,7 +30,7 @@ function calculateWaktuSelesai(waktuMulai: string, sks: number): string {
   const h = parseInt(hStr, 10);
   const m = parseInt(mStr, 10);
   if (isNaN(h) || isNaN(m)) return waktuMulai;
-  const totalMins = h * 60 + m + sks * 50;
+  const totalMins = h * 60 + m + sks * 45;
   const endH = Math.floor(totalMins / 60) % 24;
   const endM = totalMins % 60;
   return `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;

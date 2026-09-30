@@ -265,7 +265,7 @@ export function getCampusLabCloseTimes(items: JadwalItem[]): Record<string, numb
     ) {
       const campus = getCampusForRoom(item.ruangan, items);
       const startMins = timeToMinutes(item.waktuMulai);
-      const duration = item.sks ? item.sks * 50 : 100;
+      const duration = item.sks ? item.sks * 45 : 90;
       const endMins = item.waktuSelesai ? timeToMinutes(item.waktuSelesai) : startMins + duration;
 
       if (campus === "Kampus Thehok") {
@@ -283,11 +283,11 @@ export function getCampusLabCloseTimes(items: JadwalItem[]): Record<string, numb
 }
 
 /**
- * Estimasi waktu selesai perkuliahan UNAMA berdasarkan SKS (1 SKS = 50 menit)
+ * Estimasi waktu selesai perkuliahan UNAMA berdasarkan SKS (1 SKS = 45 menit)
  */
 export function estimateEndTime(waktuMulai: string, nextClassStart?: string, sks?: number): string {
   const startMins = timeToMinutes(waktuMulai);
-  const defaultDuration = sks ? sks * 50 : 100;
+  const defaultDuration = sks ? sks * 45 : 90;
 
   if (nextClassStart) {
     const nextMins = timeToMinutes(nextClassStart);
@@ -328,7 +328,7 @@ export function getInUseRooms(
   for (let i = 0; i < validItems.length; i++) {
     const item = validItems[i];
     const startMins = timeToMinutes(item.waktuMulai);
-    const duration = item.sks ? item.sks * 50 : 100;
+    const duration = item.sks ? item.sks * 45 : 90;
     const endMins = item.waktuSelesai ? timeToMinutes(item.waktuSelesai) : startMins + duration;
     const waktuSelesai = item.waktuSelesai || minutesToTime(endMins);
 
@@ -498,7 +498,7 @@ export function calculateLabGaps(
       const nextPhysical = physicalClasses[i + 1];
 
       const currentStart = timeToMinutes(currentPhysical.waktuMulai);
-      const currentDuration = currentPhysical.sks ? currentPhysical.sks * 50 : 100;
+      const currentDuration = currentPhysical.sks ? currentPhysical.sks * 45 : 90;
       const currentEnd = currentPhysical.waktuSelesai
         ? timeToMinutes(currentPhysical.waktuSelesai)
         : currentStart + currentDuration;
@@ -548,7 +548,7 @@ export function calculateLabGaps(
 
     // Kasus 4: Jeda setelah kelas fisik terakhir hingga lab kampus tutup
     const lastPhysical = physicalClasses[physicalClasses.length - 1];
-    const lastDuration = lastPhysical.sks ? lastPhysical.sks * 50 : 100;
+    const lastDuration = lastPhysical.sks ? lastPhysical.sks * 45 : 90;
     const lastPhysicalEnd = lastPhysical.waktuSelesai
       ? timeToMinutes(lastPhysical.waktuSelesai)
       : timeToMinutes(lastPhysical.waktuMulai) + lastDuration;

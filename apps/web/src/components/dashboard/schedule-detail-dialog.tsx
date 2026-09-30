@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { cn } from "cn";
 import { LiveRunningClock } from "./aslab-room-monitor";
+import { useDialogHistory } from "@/hooks/use-dialog-history";
 
 interface ScheduleDetailDialogProps {
   item: JadwalItem | null;
@@ -44,18 +45,33 @@ function getGoogleCalendarUrl(item: JadwalItem): string {
 
 export function ScheduleDetailDialog({ item, onClose }: ScheduleDetailDialogProps) {
   const [copied, setCopied] = React.useState(false);
+  const [cachedItem, setCachedItem] = React.useState<JadwalItem | null>(item);
+
+  React.useEffect(() => {
+    if (item) {
+      setCachedItem(item);
+    }
+  }, [item]);
+
+  useDialogHistory({
+    isOpen: Boolean(item),
+    onClose,
+    dialogId: "schedule-detail",
+  });
+
+  const activeItem = item || cachedItem;
 
   const handleCopy = async () => {
-    if (!item) return;
-    const timeRange = item.waktuSelesai && item.waktuSelesai !== "00:00" ? `${item.waktuMulai} - ${item.waktuSelesai}` : item.waktuMulai;
+    if (!activeItem) return;
+    const timeRange = activeItem.waktuSelesai && activeItem.waktuSelesai !== "00:00" ? `${activeItem.waktuMulai} - ${activeItem.waktuSelesai}` : activeItem.waktuMulai;
     const text = [
       `Jadwal Kuliah UNAMA`,
-      `Mata Kuliah: ${item.mataKuliah}`,
-      `Kelas: ${item.kodeKelas}`,
-      `Dosen: ${item.dosen}`,
-      `Waktu: ${item.hari}, ${item.tanggal} (${timeRange} WIB)`,
-      `Lokasi: ${item.ruangan}, ${item.kampus}`,
-      `Status: ${item.status}`,
+      `Mata Kuliah: ${activeItem.mataKuliah}`,
+      `Kelas: ${activeItem.kodeKelas}`,
+      `Dosen: ${activeItem.dosen}`,
+      `Waktu: ${activeItem.hari}, ${activeItem.tanggal} (${timeRange} WIB)`,
+      `Lokasi: ${activeItem.ruangan}, ${activeItem.kampus}`,
+      `Status: ${activeItem.status}`,
     ].join("\n");
 
     try {
@@ -70,23 +86,23 @@ export function ScheduleDetailDialog({ item, onClose }: ScheduleDetailDialogProp
   return (
     <Dialog open={Boolean(item)} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-lg p-6 rounded-none border border-border bg-card">
-        {item && (
+        {activeItem && (
           <div className="space-y-5">
             <DialogHeader className="space-y-2 text-left pb-3 border-b border-border pr-9">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge variant="outline" className="font-mono text-xs font-semibold px-2 py-0.5 rounded-none">
-                    {item.kodeKelas}
+                    {activeItem.kodeKelas}
                   </Badge>
                   <RealtimeStatusBadge
-                    status={item.status}
-                    waktuMulai={item.waktuMulai}
-                    waktuSelesai={item.waktuSelesai}
-                    sks={item.sks}
-                    tanggal={item.tanggal}
+                    status={activeItem.status}
+                    waktuMulai={activeItem.waktuMulai}
+                    waktuSelesai={activeItem.waktuSelesai}
+                    sks={activeItem.sks}
+                    tanggal={activeItem.tanggal}
                     className="rounded-none text-xs"
                   />
-                  <MethodBadge status={item.status} className="rounded-none text-xs" />
+                  <MethodBadge status={activeItem.status} className="rounded-none text-xs" />
                 </div>
                 {/* Jam Berjalan Real-Time (WIB) */}
                 <div className="shrink-0">
@@ -94,7 +110,7 @@ export function ScheduleDetailDialog({ item, onClose }: ScheduleDetailDialogProp
                 </div>
               </div>
               <DialogTitle className="text-lg font-bold leading-snug text-foreground">
-                {item.mataKuliah}
+                {activeItem.mataKuliah}
               </DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground">
                 Informasi detail jadwal sesi perkuliahan atau laboratorium komputer UNAMA
@@ -107,7 +123,7 @@ export function ScheduleDetailDialog({ item, onClose }: ScheduleDetailDialogProp
                 <User className="size-4 shrink-0 text-muted-foreground mt-0.5" />
                 <div>
                   <p className="font-medium text-muted-foreground text-[11px]">Dosen Pengampu</p>
-                  <p className="text-sm font-semibold text-foreground">{formatDosenName(item.dosen)}</p>
+                  <p className="text-sm font-semibold text-foreground">{formatDosenName(activeItem.dosen)}</p>
                 </div>
               </div>
 
@@ -116,8 +132,8 @@ export function ScheduleDetailDialog({ item, onClose }: ScheduleDetailDialogProp
                   <Calendar className="size-4 shrink-0 text-muted-foreground mt-0.5" />
                   <div>
                     <p className="font-medium text-muted-foreground text-[11px]">Hari & Tanggal</p>
-                    <p className="font-medium text-foreground">{item.hari}</p>
-                    <p className="text-[11px] text-muted-foreground">{item.tanggal}</p>
+                    <p className="font-medium text-foreground">{activeItem.hari}</p>
+                    <p className="text-[11px] text-muted-foreground">{activeItem.tanggal}</p>
                   </div>
                 </div>
 
@@ -126,7 +142,7 @@ export function ScheduleDetailDialog({ item, onClose }: ScheduleDetailDialogProp
                   <div>
                     <p className="font-medium text-muted-foreground text-[11px]">Waktu Perkuliahan</p>
                     <p className="font-semibold text-foreground font-mono">
-                      {item.waktuMulai}{item.waktuSelesai && item.waktuSelesai !== "00:00" ? ` - ${item.waktuSelesai}` : ""} WIB
+                      {activeItem.waktuMulai}{activeItem.waktuSelesai && activeItem.waktuSelesai !== "00:00" ? ` - ${activeItem.waktuSelesai}` : ""} WIB
                     </p>
                   </div>
                 </div>
@@ -137,7 +153,7 @@ export function ScheduleDetailDialog({ item, onClose }: ScheduleDetailDialogProp
                   <DoorOpen className="size-4 shrink-0 text-muted-foreground mt-0.5" />
                   <div>
                     <p className="font-medium text-muted-foreground text-[11px]">Ruangan</p>
-                    <p className="font-semibold text-foreground">{item.ruangan}</p>
+                    <p className="font-semibold text-foreground">{activeItem.ruangan}</p>
                   </div>
                 </div>
 
@@ -145,7 +161,7 @@ export function ScheduleDetailDialog({ item, onClose }: ScheduleDetailDialogProp
                   <Building2 className="size-4 shrink-0 text-muted-foreground mt-0.5" />
                   <div>
                     <p className="font-medium text-muted-foreground text-[11px]">Kampus</p>
-                    <p className="font-medium text-foreground">{item.kampus}</p>
+                    <p className="font-medium text-foreground">{activeItem.kampus}</p>
                   </div>
                 </div>
               </div>
@@ -153,7 +169,7 @@ export function ScheduleDetailDialog({ item, onClose }: ScheduleDetailDialogProp
 
             <DialogFooter className="flex items-center justify-between gap-2 pt-1">
               <a
-                href={getGoogleCalendarUrl(item)}
+                href={getGoogleCalendarUrl(activeItem)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={cn(

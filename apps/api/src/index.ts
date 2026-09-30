@@ -416,6 +416,53 @@ export const app = new Elysia()
           }),
         }
       )
+      .get(
+        '/jadwal/today/:code',
+        async ({ params: { code }, query }) => {
+          const normalized = code.trim().toUpperCase();
+          const todayFormatted = (query?.tanggal as string) || new Intl.DateTimeFormat('id-ID', {
+            timeZone: 'Asia/Jakarta',
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric',
+          }).format(new Date());
+          const altDate = todayFormatted.startsWith('0')
+            ? todayFormatted.substring(1)
+            : `0${todayFormatted}`;
+
+          const items = await db
+            .select()
+            .from(jadwalLab)
+            .where(
+              and(
+                ilike(jadwalLab.kodeKelas, normalized),
+                or(
+                  eq(jadwalLab.tanggal, todayFormatted),
+                  eq(jadwalLab.tanggal, altDate)
+                )
+              )
+            )
+            .orderBy(asc(jadwalLab.waktuMulai), asc(jadwalLab.id));
+
+          return {
+            success: true,
+            kodeKelas: normalized,
+            tanggal: todayFormatted,
+            total: items.length,
+            data: items,
+          };
+        },
+        {
+          params: t.Object({
+            code: t.String(),
+          }),
+          query: t.Optional(
+            t.Object({
+              tanggal: t.Optional(t.String()),
+            })
+          ),
+        }
+      )
       .post(
         '/auth/login',
         async ({ body, set }) => {

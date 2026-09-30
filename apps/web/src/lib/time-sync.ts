@@ -322,7 +322,7 @@ export function getRealtimeScheduleStatus(
   const currentMins =
     currentMinsOverride !== undefined ? currentMinsOverride : getGlobalMinutesWib();
   const startMins = parseTimeToMinutes(item.waktuMulai);
-  const effectiveDuration = durationMinutes ?? (item.sks ? item.sks * 50 : 100);
+  const effectiveDuration = durationMinutes ?? (item.sks ? item.sks * 45 : 90);
   const endMins = item.waktuSelesai ? parseTimeToMinutes(item.waktuSelesai) : startMins + effectiveDuration;
 
   const isToday = isDateToday(item.tanggal);
