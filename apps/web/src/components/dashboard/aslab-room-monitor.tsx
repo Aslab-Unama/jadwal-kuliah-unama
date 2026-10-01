@@ -34,6 +34,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { DateSelector } from "./date-selector";
+import { useDialogHistory } from "@/hooks/use-dialog-history";
 import { StatusBadge, RealtimeStatusBadge, MethodBadge } from "./status-badge";
 import { PaginationControls } from "./pagination-controls";
 import {
@@ -236,6 +237,7 @@ interface AslabRoomMonitorProps {
   globalKampus?: string;
   onSelectItem?: (item: JadwalItem) => void;
   className?: string;
+  isChildDialogOpen?: boolean;
 }
 
 export function AslabRoomMonitor({
@@ -245,6 +247,7 @@ export function AslabRoomMonitor({
   globalKampus,
   onSelectItem,
   className,
+  isChildDialogOpen,
 }: AslabRoomMonitorProps) {
   // Mode tampilan: "matriks" (Matrix Grid) vs "terpakai" (In-Use Cards) vs "jeda_kosong" (Empty Gaps)
   const [activeTab, setActiveTab] = React.useState<"terpakai" | "jeda_kosong" | "matriks">("matriks");
@@ -260,6 +263,25 @@ export function AslabRoomMonitor({
   const containerRef = React.useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = React.useState<boolean>(false);
   const [selectedRoomForModal, setSelectedRoomForModal] = React.useState<RoomGridItem | null>(null);
+  const prevIsChildDialogOpenRef = React.useRef(Boolean(isChildDialogOpen));
+  const justClosedChildRef = React.useRef(false);
+
+  React.useEffect(() => {
+    if (prevIsChildDialogOpenRef.current && !isChildDialogOpen) {
+      justClosedChildRef.current = true;
+      const timer = setTimeout(() => {
+        justClosedChildRef.current = false;
+      }, 400);
+      return () => clearTimeout(timer);
+    }
+    prevIsChildDialogOpenRef.current = Boolean(isChildDialogOpen);
+  }, [isChildDialogOpen]);
+
+  useDialogHistory({
+    isOpen: Boolean(selectedRoomForModal),
+    onClose: () => setSelectedRoomForModal(null),
+    dialogId: "room-modal",
+  });
   const [modalPage, setModalPage] = React.useState<number>(1);
   const [modalLimit, setModalLimit] = React.useState<number>(12);
 
@@ -1514,8 +1536,18 @@ export function AslabRoomMonitor({
       )}
 
       {/* Modal Dialog Detail Jadwal Ruangan Terpilih (Sesuai Style Bawaan globals.css) */}
-      <Dialog open={!!selectedRoomForModal} onOpenChange={(open) => !open && setSelectedRoomForModal(null)}>
+      <Dialog
+        open={!!selectedRoomForModal}
+        disablePointerDismissal={isChildDialogOpen || justClosedChildRef.current}
+        onOpenChange={(open) => {
+          if (!open) {
+            if (isChildDialogOpen || justClosedChildRef.current) return;
+            setSelectedRoomForModal(null);
+          }
+        }}
+      >
         <DialogContent
+          hidden={isChildDialogOpen}
           className="w-full sm:max-w-2xl md:max-w-3xl max-h-[88vh] overflow-y-auto p-4 sm:p-6 text-sm rounded-none border border-border bg-card"
         >
           <DialogHeader className="pb-3 border-b border-border">
@@ -1661,14 +1693,12 @@ export function AslabRoomMonitor({
                             onClick={() => {
                               if (onSelectItem) {
                                 onSelectItem(cls);
-                                setSelectedRoomForModal(null);
                               }
                             }}
                             onKeyDown={(e) => {
                               if (onSelectItem && (e.key === "Enter" || e.key === " ")) {
                                 e.preventDefault();
                                 onSelectItem(cls);
-                                setSelectedRoomForModal(null);
                               }
                             }}
                             className={cn(

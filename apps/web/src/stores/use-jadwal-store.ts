@@ -7,7 +7,7 @@ import {
   formatDateDb,
   getTodayWib,
 } from "@/lib/types";
-import { fetchJadwalList } from "@/lib/api";
+import { clearRedisCache, fetchJadwalList } from "@/lib/api";
 
 const DEFAULT_LIMIT = 24;
 
@@ -20,6 +20,7 @@ export interface JadwalStoreState {
   filters: JadwalFilters;
   viewMode: "grid" | "table";
   selectedItem: JadwalItem | null;
+  isFromAslabMonitor: boolean;
 
   // Status
   isLoading: boolean;
@@ -33,7 +34,7 @@ export interface JadwalStoreState {
   setFilters: (newFilters: Partial<JadwalFilters>) => void;
   resetFilters: () => void;
   setViewMode: (mode: "grid" | "table") => void;
-  setSelectedItem: (item: JadwalItem | null) => void;
+  setSelectedItem: (item: JadwalItem | null, fromAslabMonitor?: boolean) => void;
   setIsAslab: (isAslab: boolean) => void;
   refresh: () => Promise<void>;
 
@@ -68,6 +69,7 @@ export const useJadwalStore = create<JadwalStoreState>((set, get) => {
     },
   viewMode: "grid",
   selectedItem: null,
+  isFromAslabMonitor: false,
   isLoading: true,
   isRefreshing: false,
   error: null,
@@ -183,14 +185,20 @@ export const useJadwalStore = create<JadwalStoreState>((set, get) => {
   },
 
   setViewMode: (viewMode: "grid" | "table") => set({ viewMode }),
-  setSelectedItem: (selectedItem: JadwalItem | null) => set({ selectedItem }),
+  setSelectedItem: (selectedItem: JadwalItem | null, fromAslabMonitor: boolean = false) =>
+    set({ selectedItem, isFromAslabMonitor: selectedItem ? fromAslabMonitor : false }),
   setIsAslab: (isAslab: boolean) => set({ isAslab }),
 
   /**
    * Tombol "Perbarui" / Muat Ulang:
-   * Menarik ulang seluruh isi database dari server backend ke state dan memperbarui Redis & L1 cache.
+   * Membersihkan Redis cache dan menarik ulang seluruh isi database dari server backend ke state.
    */
   refresh: async () => {
+    try {
+      await clearRedisCache();
+    } catch {
+      // jika endpoint clear gagal, fresh request di fetchAllSchedules tetap membersihkan cache di server
+    }
     await get().fetchAllSchedules(true, true);
   },
 

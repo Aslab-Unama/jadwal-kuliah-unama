@@ -1,6 +1,6 @@
 import { Elysia, t } from 'elysia';
 import { cors } from '@elysiajs/cors';
-import { db, jadwalLab, logNotifikasiPerubahan, eq, ilike, and, or, desc, asc, sql } from '@jadwal/db';
+import { db, jadwalLab, logNotifikasiPerubahan, asistenLab, absensiAslab, eq, ilike, and, or, desc, asc, sql } from '@jadwal/db';
 import { httpLogger, log } from './logger';
 import { getCachedAllJadwal, setCachedAllJadwal, invalidateAllJadwalCache } from './redis';
 import { InMemoryRateLimiter } from './rate-limiter';
@@ -137,6 +137,9 @@ export const app = new Elysia()
             conditions.push(ilike(jadwalLab.ruangan, `%${roomFilter}%`));
           }
 
+          // Periksa apakah ada filter kriteria dari user sebelum kondisi dasar waktu ditambahkan
+          const hasUserFilters = conditions.length > 0;
+
           // Perkuliahan dimulai minimal pukul 08:00 WIB (jadwal sebelum jam 08:00 diabaikan)
           conditions.push(sql`${jadwalLab.waktuMulai} >= '08:00'`);
 
@@ -145,8 +148,13 @@ export const app = new Elysia()
           const whereClause = and(...conditions);
 
           if (isAll) {
-            // 1. Cek Multi-Layer Cache (L1 Memory / L2 Redis) jika tidak meminta fresh data
-            if (conditions.length === 0 && !isFresh) {
+            // Jika tombol Perbarui diklik (fresh=true), bersihkan cache Redis & L1 terlebih dahulu
+            if (isFresh) {
+              await invalidateAllJadwalCache();
+            }
+
+            // 1. Cek Multi-Layer Cache (L1 Memory / L2 Redis) jika refresh browser biasa (bukan fresh)
+            if (!hasUserFilters && !isFresh) {
               const cached = await getCachedAllJadwal<any[]>();
               if (cached && Array.isArray(cached.data) && cached.data.length > 0) {
                 return {
@@ -163,7 +171,7 @@ export const app = new Elysia()
               }
             }
 
-            // 2. Cache MISS: Query Supabase PostgreSQL dengan kolom esensial (tanpa createdAt/updatedAt agar payload ringan)
+            // 2. Cache MISS / Fresh: Query Supabase PostgreSQL dengan kolom esensial (tanpa createdAt/updatedAt agar payload ringan)
             const items = await db
               .select({
                 id: jadwalLab.id,
@@ -184,7 +192,7 @@ export const app = new Elysia()
               .orderBy(asc(jadwalLab.waktuMulai), asc(jadwalLab.id));
 
             // 3. Simpan ke Redis jika query tanpa filter tambahan
-            if (conditions.length === 0 && items.length > 0) {
+            if (!hasUserFilters && items.length > 0) {
               await setCachedAllJadwal(items);
             }
 
@@ -538,6 +546,221 @@ export const app = new Elysia()
           message: 'Cache Redis jadwal berhasil dibersihkan',
         };
       })
+      .group('/aslab', (aslabGroup) =>
+        aslabGroup
+          .get('/asisten', async () => {
+            const list = await db
+              .select()
+              .from(asistenLab)
+              .where(eq(asistenLab.isActive, true))
+              .orderBy(asc(asistenLab.ruangan), asc(asistenLab.nama));
+
+            return {
+              success: true,
+              data: list,
+            };
+          })
+          .get(
+            '/absensi',
+            async ({ query }) => {
+              const conditions = [];
+              if (query?.tanggal) {
+                conditions.push(eq(absensiAslab.tanggal, query.tanggal));
+              }
+              const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+              const items = await db
+                .select()
+                .from(absensiAslab)
+                .where(whereClause)
+                .orderBy(desc(absensiAslab.id));
+
+              return {
+                success: true,
+                total: items.length,
+                data: items,
+              };
+            },
+            {
+              query: t.Optional(
+                t.Object({
+                  tanggal: t.Optional(t.String()),
+                })
+              ),
+            }
+          )
+          .post(
+            '/absen',
+            async ({ body, set }) => {
+              const {
+                jadwalId,
+                tanggal,
+                jamMasuk,
+                waktuMulai,
+                waktuSelesai,
+                ruangan,
+                kampus,
+                kodeKelas,
+                mataKuliah,
+                dosen,
+                statusPerkuliahan,
+                namaAsisten,
+              } = body;
+
+              // 1. Validasi fingerprint unik untuk anti duplikasi
+              const fingerprint = `${tanggal.trim()}_${kodeKelas.trim()}_${ruangan.trim()}_${waktuMulai.trim()}`;
+
+              const existing = await db
+                .select()
+                .from(absensiAslab)
+                .where(eq(absensiAslab.fingerprint, fingerprint))
+                .limit(1);
+
+              if (existing.length > 0) {
+                set.status = 409;
+                return {
+                  success: false,
+                  alreadySubmitted: true,
+                  message: `Jadwal ini sudah diabsen sebelumnya oleh ${existing[0].namaAsisten}.`,
+                  data: existing[0],
+                };
+              }
+
+              // 2. Format tanggal ISO (YYYY-MM-DD) untuk Google Form
+              let tanggalIso = body.tanggalIso;
+              if (!tanggalIso) {
+                const months: Record<string, string> = {
+                  januari: '01', februari: '02', maret: '03', april: '04',
+                  mei: '05', juni: '06', juli: '07', agustus: '08',
+                  september: '09', oktober: '10', november: '11', desember: '12'
+                };
+                const parts = tanggal.trim().split(' ');
+                if (parts.length === 3) {
+                  const day = parts[0].padStart(2, '0');
+                  const month = months[parts[1].toLowerCase()] || '01';
+                  const year = parts[2];
+                  tanggalIso = `${year}-${month}-${day}`;
+                } else {
+                  tanggalIso = new Date().toISOString().slice(0, 10);
+                }
+              }
+
+              // 3. Normalisasi nomor lab untuk dropdown Google Form (misal: '1.9 Kobar')
+              let nomorLab = body.nomorLab;
+              if (!nomorLab) {
+                const labMatch = ruangan.match(/(\d+\.\d+)/);
+                const num = labMatch ? labMatch[1] : '';
+                const isKobar = kampus.toLowerCase().includes('kobar');
+                const isThehok = kampus.toLowerCase().includes('thehok');
+                if (num && isKobar) nomorLab = `${num} Kobar`;
+                else if (num && isThehok) nomorLab = `${num} Thehok`;
+                else if (ruangan.toLowerCase().includes('cisco')) nomorLab = '4.3 Thehok';
+                else if (ruangan.toLowerCase().includes('pasca') || ruangan.toLowerCase().includes('s2')) nomorLab = 'Lab S2';
+                else nomorLab = ruangan;
+              }
+
+              // 4. Kirim data langsung ke Google Form endpoint formResponse
+              const GOOGLE_FORM_RESPONSE_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSdSoyuDSrcccQN4brn_dAt3O_aoWeGVf5Qe9Z6miy6JhqBf6A/formResponse';
+
+              const dateParts = tanggalIso.split('-');
+              const year = dateParts[0] || '2026';
+              const month = dateParts[1] || '10';
+              const day = dateParts[2] || '01';
+
+              const formParams = new URLSearchParams({
+                'entry.146029558': dosen,
+                'entry.404112387': mataKuliah,
+                'entry.380055525': kodeKelas,
+                'entry.1558064062': statusPerkuliahan,
+                'entry.1210016936': tanggalIso,
+                'entry.1210016936_year': year,
+                'entry.1210016936_month': month,
+                'entry.1210016936_day': day,
+                'entry.1292956818': jamMasuk,
+                'entry.1658465425': namaAsisten,
+                'entry.1487398951': nomorLab,
+                'fvv': '1',
+                'pageHistory': '0',
+              });
+
+              let gformStatus = 'SUCCESS';
+              try {
+                const res = await fetch(GOOGLE_FORM_RESPONSE_URL, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                  },
+                  body: formParams.toString(),
+                });
+
+                const resText = await res.text();
+                const isSuccess =
+                  res.status === 200 ||
+                  res.status === 302 ||
+                  resText.includes('freebirdFormviewerViewResponseConfirmationMessage') ||
+                  resText.includes('Tanggapan Anda telah dicatat') ||
+                  resText.includes('response has been recorded');
+
+                if (!isSuccess) {
+                  gformStatus = 'FAILED';
+                }
+              } catch (fetchErr) {
+                log.error(`Gagal mengirim ke Google Form: ${fetchErr}`);
+                gformStatus = 'FAILED';
+              }
+
+              // 5. Simpan catatan ke database absensi_aslab
+              const [saved] = await db
+                .insert(absensiAslab)
+                .values({
+                  jadwalId: jadwalId || null,
+                  tanggal,
+                  tanggalIso,
+                  jamMasuk,
+                  waktuMulai,
+                  waktuSelesai: waktuSelesai || null,
+                  ruangan,
+                  kampus,
+                  nomorLab,
+                  kodeKelas,
+                  mataKuliah,
+                  dosen,
+                  statusPerkuliahan,
+                  namaAsisten,
+                  statusGform: gformStatus,
+                  fingerprint,
+                })
+                .returning();
+
+              return {
+                success: true,
+                message: gformStatus === 'SUCCESS'
+                  ? 'Absensi berhasil dikirim ke Google Form dan tersimpan di database!'
+                  : 'Absensi tersimpan di database, tetapi respon Google Form terkendala.',
+                data: saved,
+              };
+            },
+            {
+              body: t.Object({
+                jadwalId: t.Optional(t.Numeric()),
+                tanggal: t.String(),
+                tanggalIso: t.Optional(t.String()),
+                jamMasuk: t.String(),
+                waktuMulai: t.String(),
+                waktuSelesai: t.Optional(t.String()),
+                ruangan: t.String(),
+                kampus: t.String(),
+                nomorLab: t.Optional(t.String()),
+                kodeKelas: t.String(),
+                mataKuliah: t.String(),
+                dosen: t.String(),
+                statusPerkuliahan: t.String(),
+                namaAsisten: t.String(),
+              }),
+            }
+          )
+      )
       .group('/notifications', (notifGroup) =>
         notifGroup
           .get(

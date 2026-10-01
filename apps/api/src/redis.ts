@@ -99,7 +99,7 @@ export async function invalidateAllJadwalCache(): Promise<void> {
   if (!redis) return;
   try {
     await redis.del(CACHE_KEYS.ALL_JADWAL);
-    log.info('🧹 L1 RAM & L2 Redis cache jadwal:all_v1 cleared');
+    log.info(`🧹 L1 RAM & L2 Redis cache ${CACHE_KEYS.ALL_JADWAL} cleared`);
   } catch (err) {
     log.warn(`⚠️ Redis DEL error: ${err}`);
   }

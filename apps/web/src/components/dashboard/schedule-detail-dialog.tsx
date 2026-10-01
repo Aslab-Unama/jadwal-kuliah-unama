@@ -18,6 +18,7 @@ import {
   Calendar,
   CalendarPlus,
   Check,
+  CheckCircle2,
   Clock,
   Copy,
   DoorOpen,
@@ -26,6 +27,15 @@ import {
 import { cn } from "cn";
 import { LiveRunningClock } from "./aslab-room-monitor";
 import { useDialogHistory } from "@/hooks/use-dialog-history";
+import { useJadwalStore } from "@/stores/use-jadwal-store";
+import { AslabAttendanceDialog } from "./aslab-attendance-dialog";
+import { isLabRoom } from "@/lib/lab-utils";
+
+function getCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(new RegExp(`(^| )${name}=([^;]+)`));
+  return match ? match[2] : null;
+}
 
 interface ScheduleDetailDialogProps {
   item: JadwalItem | null;
@@ -46,6 +56,17 @@ function getGoogleCalendarUrl(item: JadwalItem): string {
 export function ScheduleDetailDialog({ item, onClose }: ScheduleDetailDialogProps) {
   const [copied, setCopied] = React.useState(false);
   const [cachedItem, setCachedItem] = React.useState<JadwalItem | null>(item);
+  const [isAttendanceOpen, setIsAttendanceOpen] = React.useState(false);
+
+  const isAslabStore = useJadwalStore((s) => s.isAslab);
+  const isFromAslabMonitor = useJadwalStore((s) => s.isFromAslabMonitor);
+  const [isAslabCookie, setIsAslabCookie] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsAslabCookie(getCookie("aslab_logged_in") === "true");
+  }, []);
+
+  const isAslab = isAslabStore || isAslabCookie;
 
   React.useEffect(() => {
     if (item) {
@@ -56,7 +77,7 @@ export function ScheduleDetailDialog({ item, onClose }: ScheduleDetailDialogProp
   useDialogHistory({
     isOpen: Boolean(item),
     onClose,
-    dialogId: "schedule-detail",
+    dialogId: "detail-modal",
   });
 
   const activeItem = item || cachedItem;
@@ -83,9 +104,36 @@ export function ScheduleDetailDialog({ item, onClose }: ScheduleDetailDialogProp
     }
   };
 
+  const prevIsAttendanceOpenRef = React.useRef(isAttendanceOpen);
+  const justClosedAttendanceRef = React.useRef(false);
+
+  React.useEffect(() => {
+    if (prevIsAttendanceOpenRef.current && !isAttendanceOpen) {
+      justClosedAttendanceRef.current = true;
+      const timer = setTimeout(() => {
+        justClosedAttendanceRef.current = false;
+      }, 400);
+      return () => clearTimeout(timer);
+    }
+    prevIsAttendanceOpenRef.current = isAttendanceOpen;
+  }, [isAttendanceOpen]);
+
   return (
-    <Dialog open={Boolean(item)} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-lg p-6 rounded-none border border-border bg-card">
+    <>
+      <Dialog
+        open={Boolean(item)}
+        disablePointerDismissal={isAttendanceOpen || justClosedAttendanceRef.current}
+        onOpenChange={(open) => {
+          if (!open) {
+            if (isAttendanceOpen || justClosedAttendanceRef.current) return;
+            onClose();
+          }
+        }}
+      >
+        <DialogContent
+          hidden={isAttendanceOpen}
+          className="sm:max-w-lg p-6 rounded-none border border-border bg-card"
+        >
         {activeItem && (
           <div className="space-y-5">
             <DialogHeader className="space-y-2 text-left pb-3 border-b border-border pr-9">
@@ -167,19 +215,34 @@ export function ScheduleDetailDialog({ item, onClose }: ScheduleDetailDialogProp
               </div>
             </div>
 
-            <DialogFooter className="flex items-center justify-between gap-2 pt-1">
-              <a
-                href={getGoogleCalendarUrl(activeItem)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={cn(
-                  buttonVariants({ size: "sm" }),
-                  "rounded-none bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5 h-9 text-xs font-medium cursor-pointer shadow-2xs"
+            <DialogFooter className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <a
+                  href={getGoogleCalendarUrl(activeItem)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={cn(
+                    buttonVariants({ size: "sm" }),
+                    "rounded-none bg-primary text-primary-foreground hover:bg-primary/90 gap-1.5 h-9 text-xs font-medium cursor-pointer shadow-2xs"
+                  )}
+                >
+                  <CalendarPlus className="size-3.5" />
+                  <span>+ Google Calendar</span>
+                </a>
+
+                {/* Tombol Absen Lab khusus ketika dibuka dari Panel Monitoring Aslab dan merupakan ruangan Laboratorium */}
+                {isAslab && isFromAslabMonitor && isLabRoom(activeItem.ruangan) && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => setIsAttendanceOpen(true)}
+                    className="rounded-none bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 h-9 text-xs font-medium cursor-pointer shadow-2xs"
+                  >
+                    <CheckCircle2 className="size-3.5" />
+                    <span>Absen Lab</span>
+                  </Button>
                 )}
-              >
-                <CalendarPlus className="size-3.5" />
-                <span>+ Google Calendar</span>
-              </a>
+              </div>
 
               <Button
                 type="button"
@@ -205,5 +268,13 @@ export function ScheduleDetailDialog({ item, onClose }: ScheduleDetailDialogProp
         )}
       </DialogContent>
     </Dialog>
-  );
+
+    {/* Dialog Konfirmasi & Kirim Absensi Aslab Otomatis */}
+    <AslabAttendanceDialog
+      item={activeItem}
+      isOpen={isAttendanceOpen}
+      onClose={() => setIsAttendanceOpen(false)}
+    />
+  </>
+);
 }

@@ -374,3 +374,17 @@ export async function fetchJadwalList(filters: JadwalFilters): Promise<JadwalApi
     };
   }
 }
+
+export async function clearRedisCache(): Promise<boolean> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/cache/clear`, {
+      method: "POST",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    });
+    return res.ok;
+  } catch (err) {
+    console.warn("Gagal membersihkan cache redis:", err);
+    return false;
+  }
+}

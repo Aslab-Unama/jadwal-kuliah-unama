@@ -2,76 +2,100 @@
 
 import * as React from "react";
 
-let programmaticBackCount = 0;
+interface ModalStackEntry {
+  id: string;
+  onClose: () => void;
+}
+
+// Global stack of currently open modals in order of opening
+const modalStack: ModalStackEntry[] = [];
+let isPopstateHandling = false;
+
+if (typeof window !== "undefined") {
+  window.addEventListener("popstate", () => {
+    // If the pop was initiated programmatically by us, ignore it
+    if (isPopstateHandling) {
+      isPopstateHandling = false;
+      return;
+    }
+
+    // A real browser back button / swipe back was pressed on mobile/desktop
+    if (modalStack.length > 0) {
+      const topModal = modalStack.pop();
+      if (topModal) {
+        topModal.onClose();
+      }
+    }
+  });
+}
 
 interface UseDialogHistoryOptions {
   isOpen: boolean;
   onClose: () => void;
-  dialogId?: string;
+  dialogId: string;
 }
 
 export function useDialogHistory({
   isOpen,
   onClose,
-  dialogId = "dialog",
+  dialogId,
 }: UseDialogHistoryOptions) {
-  const currentModalIdRef = React.useRef<string | null>(null);
   const onCloseRef = React.useRef(onClose);
   onCloseRef.current = onClose;
+
+  const idRef = React.useRef(dialogId);
+  idRef.current = dialogId;
+
+  const isPushedRef = React.useRef(false);
 
   React.useEffect(() => {
     if (typeof window === "undefined") return;
 
     if (isOpen) {
-      const modalId = `${dialogId}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-      currentModalIdRef.current = modalId;
+      if (!isPushedRef.current) {
+        isPushedRef.current = true;
+        const entry: ModalStackEntry = {
+          id: idRef.current,
+          onClose: () => onCloseRef.current(),
+        };
+        modalStack.push(entry);
 
-      const currentState = window.history.state || {};
-      window.history.pushState(
-        {
-          ...currentState,
-          __dialog_id: modalId,
-        },
-        "",
-        window.location.href
-      );
+        window.history.pushState(
+          { ...window.history.state, __modal_id: idRef.current },
+          "",
+          window.location.href
+        );
+      }
+    } else {
+      if (isPushedRef.current) {
+        isPushedRef.current = false;
 
-      const handlePopState = () => {
-        if (programmaticBackCount > 0) {
-          programmaticBackCount--;
-          return;
+        const index = modalStack.findIndex((m) => m.id === idRef.current);
+        if (index !== -1) {
+          modalStack.splice(index, 1);
         }
 
-        const activeState = window.history.state;
-        if (!activeState || activeState.__dialog_id !== modalId) {
-          currentModalIdRef.current = null;
-          onCloseRef.current();
-        }
-      };
-
-      window.addEventListener("popstate", handlePopState);
-
-      return () => {
-        window.removeEventListener("popstate", handlePopState);
-
-        if (
-          currentModalIdRef.current &&
-          window.history.state?.__dialog_id === currentModalIdRef.current
-        ) {
-          currentModalIdRef.current = null;
-          programmaticBackCount++;
+        if (window.history.state?.__modal_id === idRef.current) {
+          isPopstateHandling = true;
           window.history.back();
         }
-      };
-    } else {
-      if (
-        currentModalIdRef.current &&
-        window.history.state?.__dialog_id === currentModalIdRef.current
-      ) {
-        currentModalIdRef.current = null;
-        programmaticBackCount++;
-        window.history.back();
       }
     }
-  }, [isOpen, dialogId]);
+  }, [isOpen]);
+
+  React.useEffect(() => {
+    return () => {
+      if (isPushedRef.current) {
+        isPushedRef.current = false;
+        const index = modalStack.findIndex((m) => m.id === idRef.current);
+        if (index !== -1) {
+          modalStack.splice(index, 1);
+        }
+        if (window.history.state?.__modal_id === idRef.current) {
+          isPopstateHandling = true;
+          window.history.back();
+        }
+      }
+    };
+  }, []);
 }

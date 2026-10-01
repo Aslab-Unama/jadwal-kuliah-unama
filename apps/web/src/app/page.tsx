@@ -84,7 +84,8 @@ export default function HomePage() {
             selectedDate={selectedDate}
             onDateChange={setSelectedDate}
             globalKampus={filters.kampus}
-            onSelectItem={setSelectedItem}
+            onSelectItem={(item) => setSelectedItem(item, true)}
+            isChildDialogOpen={Boolean(selectedItem)}
           />
         )}
 
@@ -113,7 +114,7 @@ export default function HomePage() {
         <ScheduleGrid
           items={items}
           isLoading={isLoading}
-          onSelectItem={setSelectedItem}
+          onSelectItem={(item) => setSelectedItem(item, false)}
           onResetFilters={resetFilters}
           selectedDate={selectedDate}
           filters={filters}

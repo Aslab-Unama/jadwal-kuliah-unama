@@ -1,4 +1,4 @@
-import { pgTable, serial, varchar, timestamp, uniqueIndex, integer, text } from 'drizzle-orm/pg-core';
+import { pgTable, serial, varchar, timestamp, uniqueIndex, integer, text, boolean } from 'drizzle-orm/pg-core';
 
 // Tabel Arsip: Semester Genap 2025/2026
 export const jadwalLab2025Genap = pgTable(
@@ -130,6 +130,30 @@ export const logNotifikasiPerubahan = pgTable(
   ]
 );
 
+export const asistenLab = pgTable(
+  'asisten_lab',
+  {
+    id: serial('id').primaryKey(),
+    nama: varchar('nama', { length: 150 }).notNull(),
+    nim: varchar('nim', { length: 30 }),
+    kampus: varchar('kampus', { length: 100 }).default('Kampus Kobar').notNull(),
+    ruangan: varchar('ruangan', { length: 100 }).notNull(),
+    nomorLab: varchar('nomor_lab', { length: 20 }),
+    peran: varchar('peran', { length: 50 }).default('PJ Lab').notNull(),
+    kontak: varchar('kontak', { length: 50 }),
+    isActive: boolean('is_active').default(true).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex('asisten_lab_kampus_ruangan_nama_idx').on(
+      table.kampus,
+      table.ruangan,
+      table.nama
+    ),
+  ]
+);
+
 export type JadwalLab = typeof jadwalLab.$inferSelect;
 export type NewJadwalLab = typeof jadwalLab.$inferInsert;
 export type JadwalLab2025Genap = typeof jadwalLab2025Genap.$inferSelect;
@@ -144,3 +168,36 @@ export type KurikulumPerubahan = typeof kurikulumPerubahan.$inferSelect;
 export type NewKurikulumPerubahan = typeof kurikulumPerubahan.$inferInsert;
 export type LogNotifikasiPerubahan = typeof logNotifikasiPerubahan.$inferSelect;
 export type NewLogNotifikasiPerubahan = typeof logNotifikasiPerubahan.$inferInsert;
+
+export type AsistenLab = typeof asistenLab.$inferSelect;
+export type NewAsistenLab = typeof asistenLab.$inferInsert;
+
+export const absensiAslab = pgTable(
+  'absensi_aslab',
+  {
+    id: serial('id').primaryKey(),
+    jadwalId: integer('jadwal_id'),
+    tanggal: varchar('tanggal', { length: 50 }).notNull(),
+    tanggalIso: varchar('tanggal_iso', { length: 20 }),
+    jamMasuk: varchar('jam_masuk', { length: 30 }).notNull(),
+    waktuMulai: varchar('waktu_mulai', { length: 10 }).notNull(),
+    waktuSelesai: varchar('waktu_selesai', { length: 10 }),
+    ruangan: varchar('ruangan', { length: 100 }).notNull(),
+    kampus: varchar('kampus', { length: 100 }).notNull(),
+    nomorLab: varchar('nomor_lab', { length: 50 }),
+    kodeKelas: varchar('kode_kelas', { length: 50 }).notNull(),
+    mataKuliah: varchar('mata_kuliah', { length: 255 }).notNull(),
+    dosen: varchar('dosen', { length: 255 }).notNull(),
+    statusPerkuliahan: varchar('status_perkuliahan', { length: 50 }).notNull(),
+    namaAsisten: varchar('nama_asisten', { length: 150 }).notNull(),
+    statusGform: varchar('status_gform', { length: 50 }).default('SUCCESS').notNull(),
+    fingerprint: varchar('fingerprint', { length: 255 }).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex('absensi_aslab_fingerprint_idx').on(table.fingerprint),
+  ]
+);
+
+export type AbsensiAslab = typeof absensiAslab.$inferSelect;
+export type NewAbsensiAslab = typeof absensiAslab.$inferInsert;
