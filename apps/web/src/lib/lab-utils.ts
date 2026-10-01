@@ -59,8 +59,22 @@ export const UNAMA_LABS = [
  * Data petugas jaga aslab laboratorium
  */
 export const ASLAB_CARETAKERS: Record<string, string> = {
-  "Labor 1.9": "Raffi",
+  // Kampus Kobar
+  "Labor 1.5": "Dwi",
+  "Labor 1.6": "Iqbal",
+  "Labor 1.7": "Ghali",
   "Labor 1.8": "Haikal",
+  "Labor 1.9": "Raffi",
+
+  // Kampus Thehok
+  "Labor 1.3": "Isodorus",
+  "Labor 1.4": "Ahmad Idris",
+  "Labor 2.7": "Bayu",
+  "Labor 3.1": "Rezky",
+  "Labor 3.2": "Andi",
+  "Labor 3.4": "Zuan",
+  "Labor 4.1": "Trio",
+  "Labor 4.3": "Rafli",
 };
 
 /**

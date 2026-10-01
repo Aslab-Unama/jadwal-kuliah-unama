@@ -11,10 +11,12 @@ import * as React from "react";
 import { Header } from "@/components/dashboard/header";
 import { ScheduleGrid } from "@/components/dashboard/schedule-grid";
 import { ScheduleDetailDialog } from "@/components/dashboard/schedule-detail-dialog";
+import { AslabAttendanceDialog } from "@/components/dashboard/aslab-attendance-dialog";
 import { PaginationControls } from "@/components/dashboard/pagination-controls";
 import { AslabRoomMonitor } from "@/components/dashboard/aslab-room-monitor";
 import { AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useGlobalModalHistory } from "@/hooks/use-dialog-history";
 import {
   useAslabItems,
   useJadwalStore,
@@ -45,6 +47,9 @@ export default function HomePage() {
   const aslabItems = useAslabItems();
   const summary = useJadwalSummary();
   const { items, totalFiltered, totalPages } = usePaginatedJadwal();
+
+  // Global Mobile History Manager (Android back button & swipe back support)
+  useGlobalModalHistory();
 
   // Inisialisasi status Aslab dan fetch seluruh database ke state sekali di awal
   React.useEffect(() => {
@@ -85,7 +90,6 @@ export default function HomePage() {
             onDateChange={setSelectedDate}
             globalKampus={filters.kampus}
             onSelectItem={(item) => setSelectedItem(item, true)}
-            isChildDialogOpen={Boolean(selectedItem)}
           />
         )}
 
@@ -141,8 +145,9 @@ export default function HomePage() {
         />
       </main>
 
-      {/* Modal Detail Dialog */}
-      <ScheduleDetailDialog item={selectedItem} onClose={() => setSelectedItem(null)} />
+      {/* Modal Detail & Absensi Dialogs */}
+      <ScheduleDetailDialog />
+      <AslabAttendanceDialog />
 
       {/* Public Footer */}
       <footer className="mt-auto border-t border-border/80 bg-muted/20 py-6 text-xs text-muted-foreground">

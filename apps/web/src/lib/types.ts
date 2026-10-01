@@ -137,3 +137,26 @@ export function parseDateFromDb(str: string): Date | null {
   if (isNaN(day) || month === undefined || isNaN(year)) return null;
   return new Date(year, month, day);
 }
+
+export type RoomGridStatus = "dipakai" | "jeda" | "kosong" | "terjadwal" | "selesai";
+
+export interface RoomGridItem {
+  id: string;
+  ruangan: string;
+  displayName: string;
+  kampus: "Kampus Thehok" | "Kampus Kobar";
+  isLabor: boolean;
+  status: RoomGridStatus;
+  subtitle: string;
+  colorClass: string;
+  badgeColor: string;
+  dotColor: string;
+  subtitleColor: string;
+  classes: JadwalItem[];
+}
+
+export type ActiveModal =
+  | { type: "room"; room: RoomGridItem }
+  | { type: "detail"; item: JadwalItem; fromAslabMonitor?: boolean; parentRoom?: RoomGridItem }
+  | { type: "attendance"; item: JadwalItem; parentRoom?: RoomGridItem };
+

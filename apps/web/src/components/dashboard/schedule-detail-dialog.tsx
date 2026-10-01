@@ -26,9 +26,7 @@ import {
 } from "lucide-react";
 import { cn } from "cn";
 import { LiveRunningClock } from "./aslab-room-monitor";
-import { useDialogHistory } from "@/hooks/use-dialog-history";
 import { useJadwalStore } from "@/stores/use-jadwal-store";
-import { AslabAttendanceDialog } from "./aslab-attendance-dialog";
 import { isLabRoom } from "@/lib/lab-utils";
 
 function getCookie(name: string): string | null {
@@ -38,8 +36,8 @@ function getCookie(name: string): string | null {
 }
 
 interface ScheduleDetailDialogProps {
-  item: JadwalItem | null;
-  onClose: () => void;
+  item?: JadwalItem | null;
+  onClose?: () => void;
 }
 
 function getGoogleCalendarUrl(item: JadwalItem): string {
@@ -55,11 +53,13 @@ function getGoogleCalendarUrl(item: JadwalItem): string {
 
 export function ScheduleDetailDialog({ item, onClose }: ScheduleDetailDialogProps) {
   const [copied, setCopied] = React.useState(false);
-  const [cachedItem, setCachedItem] = React.useState<JadwalItem | null>(item);
-  const [isAttendanceOpen, setIsAttendanceOpen] = React.useState(false);
 
+  const activeModal = useJadwalStore((s) => s.activeModal);
+  const closeModal = useJadwalStore((s) => s.closeModal);
+  const openAttendanceModal = useJadwalStore((s) => s.openAttendanceModal);
   const isAslabStore = useJadwalStore((s) => s.isAslab);
-  const isFromAslabMonitor = useJadwalStore((s) => s.isFromAslabMonitor);
+  const isFromAslabMonitorStore = useJadwalStore((s) => s.isFromAslabMonitor);
+
   const [isAslabCookie, setIsAslabCookie] = React.useState(false);
 
   React.useEffect(() => {
@@ -68,19 +68,20 @@ export function ScheduleDetailDialog({ item, onClose }: ScheduleDetailDialogProp
 
   const isAslab = isAslabStore || isAslabCookie;
 
+  const isDetailOpen = activeModal?.type === "detail" || (item !== undefined && Boolean(item));
+  const modalItem = activeModal?.type === "detail" ? activeModal.item : item || null;
+  const parentRoom = activeModal?.type === "detail" ? activeModal.parentRoom : undefined;
+  const isFromAslabMonitor = activeModal?.type === "detail" ? Boolean(activeModal.fromAslabMonitor) : isFromAslabMonitorStore;
+
+  const [cachedItem, setCachedItem] = React.useState<JadwalItem | null>(modalItem);
+
   React.useEffect(() => {
-    if (item) {
-      setCachedItem(item);
+    if (modalItem) {
+      setCachedItem(modalItem);
     }
-  }, [item]);
+  }, [modalItem]);
 
-  useDialogHistory({
-    isOpen: Boolean(item),
-    onClose,
-    dialogId: "detail-modal",
-  });
-
-  const activeItem = item || cachedItem;
+  const activeItem = modalItem || cachedItem;
 
   const handleCopy = async () => {
     if (!activeItem) return;
@@ -104,36 +105,17 @@ export function ScheduleDetailDialog({ item, onClose }: ScheduleDetailDialogProp
     }
   };
 
-  const prevIsAttendanceOpenRef = React.useRef(isAttendanceOpen);
-  const justClosedAttendanceRef = React.useRef(false);
-
-  React.useEffect(() => {
-    if (prevIsAttendanceOpenRef.current && !isAttendanceOpen) {
-      justClosedAttendanceRef.current = true;
-      const timer = setTimeout(() => {
-        justClosedAttendanceRef.current = false;
-      }, 400);
-      return () => clearTimeout(timer);
-    }
-    prevIsAttendanceOpenRef.current = isAttendanceOpen;
-  }, [isAttendanceOpen]);
-
   return (
-    <>
-      <Dialog
-        open={Boolean(item)}
-        disablePointerDismissal={isAttendanceOpen || justClosedAttendanceRef.current}
-        onOpenChange={(open) => {
-          if (!open) {
-            if (isAttendanceOpen || justClosedAttendanceRef.current) return;
-            onClose();
-          }
-        }}
-      >
-        <DialogContent
-          hidden={isAttendanceOpen}
-          className="sm:max-w-lg p-6 rounded-none border border-border bg-card"
-        >
+    <Dialog
+      open={isDetailOpen}
+      onOpenChange={(open) => {
+        if (!open) {
+          if (onClose) onClose();
+          closeModal();
+        }
+      }}
+    >
+      <DialogContent className="sm:max-w-lg p-6 rounded-none border border-border bg-card">
         {activeItem && (
           <div className="space-y-5">
             <DialogHeader className="space-y-2 text-left pb-3 border-b border-border pr-9">
@@ -235,7 +217,7 @@ export function ScheduleDetailDialog({ item, onClose }: ScheduleDetailDialogProp
                   <Button
                     type="button"
                     size="sm"
-                    onClick={() => setIsAttendanceOpen(true)}
+                    onClick={() => openAttendanceModal(activeItem, parentRoom)}
                     className="rounded-none bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 h-9 text-xs font-medium cursor-pointer shadow-2xs"
                   >
                     <CheckCircle2 className="size-3.5" />
@@ -268,13 +250,5 @@ export function ScheduleDetailDialog({ item, onClose }: ScheduleDetailDialogProp
         )}
       </DialogContent>
     </Dialog>
-
-    {/* Dialog Konfirmasi & Kirim Absensi Aslab Otomatis */}
-    <AslabAttendanceDialog
-      item={activeItem}
-      isOpen={isAttendanceOpen}
-      onClose={() => setIsAttendanceOpen(false)}
-    />
-  </>
-);
+  );
 }

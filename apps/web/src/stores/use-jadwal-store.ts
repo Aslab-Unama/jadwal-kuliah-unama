@@ -1,13 +1,16 @@
 import * as React from "react";
 import { create } from "zustand";
 import {
+  ActiveModal,
   JadwalFilters,
   JadwalItem,
   JadwalSummaryData,
+  RoomGridItem,
   formatDateDb,
   getTodayWib,
 } from "@/lib/types";
 import { clearRedisCache, fetchJadwalList } from "@/lib/api";
+import { pushModalHistory, triggerProgrammaticBack } from "@/hooks/use-dialog-history";
 
 const DEFAULT_LIMIT = 24;
 
@@ -19,6 +22,7 @@ export interface JadwalStoreState {
   selectedDate: Date | null;
   filters: JadwalFilters;
   viewMode: "grid" | "table";
+  activeModal: ActiveModal | null;
   selectedItem: JadwalItem | null;
   isFromAslabMonitor: boolean;
 
@@ -34,6 +38,10 @@ export interface JadwalStoreState {
   setFilters: (newFilters: Partial<JadwalFilters>) => void;
   resetFilters: () => void;
   setViewMode: (mode: "grid" | "table") => void;
+  openRoomModal: (room: RoomGridItem) => void;
+  openDetailModal: (item: JadwalItem, fromAslabMonitor?: boolean, parentRoom?: RoomGridItem) => void;
+  openAttendanceModal: (item: JadwalItem, parentRoom?: RoomGridItem) => void;
+  closeModal: (fromPopstate?: boolean) => void;
   setSelectedItem: (item: JadwalItem | null, fromAslabMonitor?: boolean) => void;
   setIsAslab: (isAslab: boolean) => void;
   refresh: () => Promise<void>;
@@ -67,10 +75,11 @@ export const useJadwalStore = create<JadwalStoreState>((set, get) => {
       ...DEFAULT_FILTERS,
       tanggal: formatDateDb(initialDate),
     },
-  viewMode: "grid",
-  selectedItem: null,
-  isFromAslabMonitor: false,
-  isLoading: true,
+    viewMode: "grid",
+    activeModal: null,
+    selectedItem: null,
+    isFromAslabMonitor: false,
+    isLoading: true,
   isRefreshing: false,
   error: null,
   isAslab: false,
@@ -185,8 +194,108 @@ export const useJadwalStore = create<JadwalStoreState>((set, get) => {
   },
 
   setViewMode: (viewMode: "grid" | "table") => set({ viewMode }),
-  setSelectedItem: (selectedItem: JadwalItem | null, fromAslabMonitor: boolean = false) =>
-    set({ selectedItem, isFromAslabMonitor: selectedItem ? fromAslabMonitor : false }),
+
+  openRoomModal: (room: RoomGridItem) => {
+    set({
+      activeModal: { type: "room", room },
+      selectedItem: null,
+      isFromAslabMonitor: false,
+    });
+    pushModalHistory(1);
+  },
+
+  openDetailModal: (
+    item: JadwalItem,
+    fromAslabMonitor: boolean = false,
+    parentRoom?: RoomGridItem
+  ) => {
+    const current = get().activeModal;
+    const resolvedParent =
+      parentRoom || (current?.type === "room" ? current.room : undefined);
+
+    set({
+      activeModal: {
+        type: "detail",
+        item,
+        fromAslabMonitor,
+        parentRoom: resolvedParent,
+      },
+      selectedItem: item,
+      isFromAslabMonitor: fromAslabMonitor,
+    });
+    pushModalHistory(resolvedParent ? 2 : 1);
+  },
+
+  openAttendanceModal: (item: JadwalItem, parentRoom?: RoomGridItem) => {
+    const current = get().activeModal;
+    const resolvedParent =
+      parentRoom ||
+      (current?.type === "detail" ? current.parentRoom : undefined);
+
+    set({
+      activeModal: {
+        type: "attendance",
+        item,
+        parentRoom: resolvedParent,
+      },
+      selectedItem: item,
+      isFromAslabMonitor: true,
+    });
+    pushModalHistory(resolvedParent ? 3 : 2);
+  },
+
+  closeModal: (fromPopstate: boolean = false) => {
+    const current = get().activeModal;
+    if (!current) return;
+
+    if (!fromPopstate) {
+      triggerProgrammaticBack();
+    }
+
+    if (current.type === "attendance") {
+      set({
+        activeModal: {
+          type: "detail",
+          item: current.item,
+          fromAslabMonitor: true,
+          parentRoom: current.parentRoom,
+        },
+        selectedItem: current.item,
+        isFromAslabMonitor: true,
+      });
+    } else if (current.type === "detail") {
+      if (current.parentRoom) {
+        set({
+          activeModal: {
+            type: "room",
+            room: current.parentRoom,
+          },
+          selectedItem: null,
+          isFromAslabMonitor: false,
+        });
+      } else {
+        set({
+          activeModal: null,
+          selectedItem: null,
+          isFromAslabMonitor: false,
+        });
+      }
+    } else if (current.type === "room") {
+      set({
+        activeModal: null,
+        selectedItem: null,
+        isFromAslabMonitor: false,
+      });
+    }
+  },
+
+  setSelectedItem: (item: JadwalItem | null, fromAslabMonitor: boolean = false) => {
+    if (item) {
+      get().openDetailModal(item, fromAslabMonitor);
+    } else {
+      get().closeModal(false);
+    }
+  },
   setIsAslab: (isAslab: boolean) => set({ isAslab }),
 
   /**

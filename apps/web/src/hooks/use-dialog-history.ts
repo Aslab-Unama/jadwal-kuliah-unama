@@ -1,101 +1,45 @@
 "use client";
 
 import * as React from "react";
+import { useJadwalStore } from "@/stores/use-jadwal-store";
 
-interface ModalStackEntry {
-  id: string;
-  onClose: () => void;
+let isProgrammaticNavigation = false;
+
+export function triggerProgrammaticBack() {
+  if (typeof window === "undefined") return;
+  isProgrammaticNavigation = true;
+  window.history.back();
 }
 
-// Global stack of currently open modals in order of opening
-const modalStack: ModalStackEntry[] = [];
-let isPopstateHandling = false;
-
-if (typeof window !== "undefined") {
-  window.addEventListener("popstate", () => {
-    // If the pop was initiated programmatically by us, ignore it
-    if (isPopstateHandling) {
-      isPopstateHandling = false;
-      return;
-    }
-
-    // A real browser back button / swipe back was pressed on mobile/desktop
-    if (modalStack.length > 0) {
-      const topModal = modalStack.pop();
-      if (topModal) {
-        topModal.onClose();
-      }
-    }
-  });
+export function pushModalHistory(level: number) {
+  if (typeof window === "undefined") return;
+  window.history.pushState(
+    { ...window.history.state, __modal_level: level },
+    "",
+    window.location.href
+  );
 }
 
-interface UseDialogHistoryOptions {
-  isOpen: boolean;
-  onClose: () => void;
-  dialogId: string;
-}
-
-export function useDialogHistory({
-  isOpen,
-  onClose,
-  dialogId,
-}: UseDialogHistoryOptions) {
-  const onCloseRef = React.useRef(onClose);
-  onCloseRef.current = onClose;
-
-  const idRef = React.useRef(dialogId);
-  idRef.current = dialogId;
-
-  const isPushedRef = React.useRef(false);
-
+export function useGlobalModalHistory() {
   React.useEffect(() => {
     if (typeof window === "undefined") return;
 
-    if (isOpen) {
-      if (!isPushedRef.current) {
-        isPushedRef.current = true;
-        const entry: ModalStackEntry = {
-          id: idRef.current,
-          onClose: () => onCloseRef.current(),
-        };
-        modalStack.push(entry);
-
-        window.history.pushState(
-          { ...window.history.state, __modal_id: idRef.current },
-          "",
-          window.location.href
-        );
+    const handlePopState = () => {
+      if (isProgrammaticNavigation) {
+        isProgrammaticNavigation = false;
+        return;
       }
-    } else {
-      if (isPushedRef.current) {
-        isPushedRef.current = false;
 
-        const index = modalStack.findIndex((m) => m.id === idRef.current);
-        if (index !== -1) {
-          modalStack.splice(index, 1);
-        }
-
-        if (window.history.state?.__modal_id === idRef.current) {
-          isPopstateHandling = true;
-          window.history.back();
-        }
+      // Hardware/virtual back button or browser back gesture
+      const state = useJadwalStore.getState();
+      if (state.activeModal) {
+        state.closeModal(true);
       }
-    }
-  }, [isOpen]);
+    };
 
-  React.useEffect(() => {
+    window.addEventListener("popstate", handlePopState);
     return () => {
-      if (isPushedRef.current) {
-        isPushedRef.current = false;
-        const index = modalStack.findIndex((m) => m.id === idRef.current);
-        if (index !== -1) {
-          modalStack.splice(index, 1);
-        }
-        if (window.history.state?.__modal_id === idRef.current) {
-          isPopstateHandling = true;
-          window.history.back();
-        }
-      }
+      window.removeEventListener("popstate", handlePopState);
     };
   }, []);
 }

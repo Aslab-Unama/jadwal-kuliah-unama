@@ -41,12 +41,12 @@ import {
   UserCheck,
 } from "lucide-react";
 import { cn } from "cn";
-import { useDialogHistory } from "@/hooks/use-dialog-history";
+import { useJadwalStore } from "@/stores/use-jadwal-store";
 
 interface AslabAttendanceDialogProps {
-  item: JadwalItem | null;
-  isOpen: boolean;
-  onClose: () => void;
+  item?: JadwalItem | null;
+  isOpen?: boolean;
+  onClose?: () => void;
   onSuccess?: () => void;
 }
 
@@ -83,6 +83,32 @@ export function AslabAttendanceDialog({
   onClose,
   onSuccess,
 }: AslabAttendanceDialogProps) {
+  const activeModal = useJadwalStore((s) => s.activeModal);
+  const closeModal = useJadwalStore((s) => s.closeModal);
+
+  const isAttendanceModalOpen =
+    isOpen !== undefined ? isOpen : activeModal?.type === "attendance";
+  const modalItem =
+    item !== undefined
+      ? item
+      : activeModal?.type === "attendance"
+      ? activeModal.item
+      : null;
+
+  const [cachedItem, setCachedItem] = React.useState<JadwalItem | null>(modalItem);
+  React.useEffect(() => {
+    if (modalItem) {
+      setCachedItem(modalItem);
+    }
+  }, [modalItem]);
+
+  const effectiveItem = modalItem || cachedItem;
+
+  const handleClose = () => {
+    if (onClose) onClose();
+    closeModal();
+  };
+
   const [asistenList, setAsistenList] = React.useState<AsistenLabItem[]>([]);
   const [namaAsisten, setNamaAsisten] = React.useState<string>("");
   const [customNama, setCustomNama] = React.useState<string>("");
@@ -96,12 +122,6 @@ export function AslabAttendanceDialog({
   const [isSubmitting, setIsSubmitting] = React.useState<boolean>(false);
   const [submitSuccess, setSubmitSuccess] = React.useState<boolean>(false);
   const [feedbackMessage, setFeedbackMessage] = React.useState<string | null>(null);
-
-  useDialogHistory({
-    isOpen,
-    onClose,
-    dialogId: "aslab-attendance",
-  });
 
   // Load asisten list once
   React.useEffect(() => {
@@ -118,16 +138,16 @@ export function AslabAttendanceDialog({
 
   // When active item changes or modal opens
   React.useEffect(() => {
-    if (!item || !isOpen) {
+    if (!effectiveItem || !isAttendanceModalOpen) {
       setSubmitSuccess(false);
       setFeedbackMessage(null);
       setAlreadySubmitted(null);
       return;
     }
 
-    const defaultNomorLab = formatNomorLab(item.ruangan, item.kampus);
-    const defaultJam = formatJamMasuk(item.waktuMulai);
-    const defaultStatus = formatStatusPerkuliahan(item.status);
+    const defaultNomorLab = formatNomorLab(effectiveItem.ruangan, effectiveItem.kampus);
+    const defaultJam = formatJamMasuk(effectiveItem.waktuMulai);
+    const defaultStatus = formatStatusPerkuliahan(effectiveItem.status);
 
     setNomorLab(defaultNomorLab);
     setJamMasuk(defaultJam);
@@ -135,12 +155,23 @@ export function AslabAttendanceDialog({
     setSubmitSuccess(false);
     setFeedbackMessage(null);
 
-    // Cari asisten yang bertanggung jawab di lab ini dari data database
-    const matchedAslab = asistenList.find(
-      (a) =>
-        a.ruangan.toLowerCase() === item.ruangan.toLowerCase() ||
-        (a.nomorLab && item.ruangan.includes(a.nomorLab))
-    );
+    // Cari asisten yang bertanggung jawab di lab ini dari data database (sesuai ruangan & kampus)
+    const itemKampus = effectiveItem.kampus.toLowerCase();
+    const itemRoom = effectiveItem.ruangan.toLowerCase();
+
+    const matchedAslab =
+      asistenList.find((a) => {
+        const isRoom =
+          a.ruangan.toLowerCase() === itemRoom ||
+          (a.nomorLab && itemRoom.includes(a.nomorLab));
+        const isKampus =
+          (itemKampus.includes("thehok") && a.kampus.toLowerCase().includes("thehok")) ||
+          (itemKampus.includes("kobar") && a.kampus.toLowerCase().includes("kobar"));
+        return isRoom && isKampus;
+      }) ||
+      asistenList.find((a) => {
+        return a.ruangan.toLowerCase() === itemRoom || (a.nomorLab && itemRoom.includes(a.nomorLab));
+      });
 
     if (matchedAslab) {
       setNamaAsisten(matchedAslab.nama);
@@ -154,13 +185,13 @@ export function AslabAttendanceDialog({
     // Cek status duplikasi ke database
     setIsLoadingCheck(true);
     const expectedFingerprint = generateAttendanceFingerprint(
-      item.tanggal,
-      item.kodeKelas,
-      item.ruangan,
-      item.waktuMulai
+      effectiveItem.tanggal,
+      effectiveItem.kodeKelas,
+      effectiveItem.ruangan,
+      effectiveItem.waktuMulai
     );
 
-    fetchAbsensiList(item.tanggal)
+    fetchAbsensiList(effectiveItem.tanggal)
       .then((records) => {
         const found = records.find((r) => r.fingerprint === expectedFingerprint);
         if (found) {
@@ -172,25 +203,25 @@ export function AslabAttendanceDialog({
       .finally(() => {
         setIsLoadingCheck(false);
       });
-  }, [item, isOpen, asistenList]);
+  }, [effectiveItem, isAttendanceModalOpen, asistenList]);
 
-  if (!item) return null;
+  if (!effectiveItem) return null;
 
   const effectiveNamaAsisten = namaAsisten === "OTHER" ? customNama.trim() : namaAsisten;
 
   const currentPayload = {
-    jadwalId: item.id,
-    tanggal: item.tanggal,
-    tanggalIso: convertIndoDateToIso(item.tanggal),
+    jadwalId: effectiveItem.id,
+    tanggal: effectiveItem.tanggal,
+    tanggalIso: convertIndoDateToIso(effectiveItem.tanggal),
     jamMasuk,
-    waktuMulai: item.waktuMulai,
-    waktuSelesai: item.waktuSelesai || undefined,
-    ruangan: item.ruangan,
-    kampus: item.kampus,
+    waktuMulai: effectiveItem.waktuMulai,
+    waktuSelesai: effectiveItem.waktuSelesai || undefined,
+    ruangan: effectiveItem.ruangan,
+    kampus: effectiveItem.kampus,
     nomorLab,
-    kodeKelas: item.kodeKelas,
-    mataKuliah: item.mataKuliah,
-    dosen: item.dosen,
+    kodeKelas: effectiveItem.kodeKelas,
+    mataKuliah: effectiveItem.mataKuliah,
+    dosen: effectiveItem.dosen,
     statusPerkuliahan,
     namaAsisten: effectiveNamaAsisten,
   };
@@ -229,7 +260,7 @@ export function AslabAttendanceDialog({
   const prefillUrl = getGoogleFormPrefillUrl(currentPayload);
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isAttendanceModalOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className="w-full sm:max-w-xl p-5 sm:p-6 rounded-none border border-border bg-card max-h-[90vh] overflow-y-auto overflow-x-hidden">
         <DialogHeader className="space-y-1.5 text-left pb-3 border-b border-border pr-8">
           <div className="flex items-center gap-2">
@@ -290,10 +321,10 @@ export function AslabAttendanceDialog({
             </div>
 
             <div className="p-3 border border-border bg-muted/20 text-xs space-y-1.5">
-              <p className="font-semibold text-foreground">{item.mataKuliah} ({item.kodeKelas})</p>
-              <p className="text-muted-foreground">{formatDosenName(item.dosen)}</p>
+              <p className="font-semibold text-foreground">{effectiveItem.mataKuliah} ({effectiveItem.kodeKelas})</p>
+              <p className="text-muted-foreground">{formatDosenName(effectiveItem.dosen)}</p>
               <p className="text-[11px] font-mono text-muted-foreground">
-                {item.ruangan} ({item.kampus}) &bull; {item.hari}, {item.tanggal}
+                {effectiveItem.ruangan} ({effectiveItem.kampus}) &bull; {effectiveItem.hari}, {effectiveItem.tanggal}
               </p>
             </div>
           </div>
@@ -313,7 +344,7 @@ export function AslabAttendanceDialog({
             </div>
             <div className="p-3 bg-muted/20 border border-border text-xs text-left font-mono space-y-1">
               <p className="text-muted-foreground">Asisten: <strong className="text-foreground">{effectiveNamaAsisten}</strong></p>
-              <p className="text-muted-foreground">Kelas: <strong className="text-foreground">{item.kodeKelas} - {item.mataKuliah}</strong></p>
+              <p className="text-muted-foreground">Kelas: <strong className="text-foreground">{effectiveItem.kodeKelas} - {effectiveItem.mataKuliah}</strong></p>
               <p className="text-muted-foreground">Ruang: <strong className="text-foreground">{nomorLab}</strong> ({jamMasuk})</p>
             </div>
           </div>
@@ -332,13 +363,13 @@ export function AslabAttendanceDialog({
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <Badge variant="outline" className="font-mono text-[10px] px-1.5 py-0 mb-1 rounded-none">
-                    {item.kodeKelas}
+                    {effectiveItem.kodeKelas}
                   </Badge>
                   <h4 className="font-bold text-sm text-foreground leading-snug">
-                    {item.mataKuliah}
+                    {effectiveItem.mataKuliah}
                   </h4>
                   <p className="text-[11px] text-muted-foreground mt-0.5">
-                    Dosen: <strong className="text-foreground/80">{formatDosenName(item.dosen)}</strong>
+                    Dosen: <strong className="text-foreground/80">{formatDosenName(effectiveItem.dosen)}</strong>
                   </p>
                 </div>
                 <Badge variant="secondary" className="font-mono text-[10px] shrink-0 rounded-none whitespace-nowrap">
@@ -349,11 +380,11 @@ export function AslabAttendanceDialog({
               <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border/50 text-[11px] font-mono text-muted-foreground">
                 <div>
                   <span className="block text-[10px] uppercase text-muted-foreground/70">Waktu Jadwal</span>
-                  <span className="font-semibold text-foreground">{item.waktuMulai} WIB</span>
+                  <span className="font-semibold text-foreground">{effectiveItem.waktuMulai} WIB</span>
                 </div>
                 <div>
                   <span className="block text-[10px] uppercase text-muted-foreground/70">Tanggal</span>
-                  <span className="font-semibold text-foreground">{item.tanggal}</span>
+                  <span className="font-semibold text-foreground">{effectiveItem.tanggal}</span>
                 </div>
               </div>
             </div>
@@ -380,7 +411,7 @@ export function AslabAttendanceDialog({
               >
                 {asistenList.map((aslab) => (
                   <NativeSelectOption key={aslab.id} value={aslab.nama}>
-                    {aslab.nama} {aslab.ruangan ? `(${aslab.ruangan})` : ""}
+                    {aslab.nama} ({aslab.ruangan} - {aslab.kampus.replace("Kampus ", "")})
                   </NativeSelectOption>
                 ))}
                 <NativeSelectOption value="OTHER">Lainnya / Ganti Nama...</NativeSelectOption>
@@ -444,7 +475,7 @@ export function AslabAttendanceDialog({
             type="button"
             variant="outline"
             size="sm"
-            onClick={onClose}
+            onClick={handleClose}
             className="w-full sm:w-auto rounded-none text-xs h-9 cursor-pointer text-muted-foreground hover:text-foreground shrink-0"
           >
             {submitSuccess || alreadySubmitted ? "Tutup" : "Batal"}

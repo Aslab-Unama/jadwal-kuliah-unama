@@ -9,7 +9,8 @@ interface AsistenLabData {
   is_active: boolean;
 }
 
-const asistenKobarList: AsistenLabData[] = [
+const asistenList: AsistenLabData[] = [
+  // Kampus Kobar
   {
     nama: 'Dwi Cahaya Medika',
     kampus: 'Kampus Kobar',
@@ -35,10 +36,92 @@ const asistenKobarList: AsistenLabData[] = [
     is_active: true,
   },
   {
+    nama: 'Haikal Wais Alqorni',
+    kampus: 'Kampus Kobar',
+    ruangan: 'Labor 1.8',
+    nomor_lab: '1.8',
+    peran: 'PJ Lab',
+    is_active: true,
+  },
+  {
     nama: 'M.Raffi Pra Diestyawan',
     kampus: 'Kampus Kobar',
     ruangan: 'Labor 1.9',
     nomor_lab: '1.9',
+    peran: 'PJ Lab',
+    is_active: true,
+  },
+
+  // Kampus Thehok
+  {
+    nama: 'Isodorus Bakti Pangestu',
+    kampus: 'Kampus Thehok',
+    ruangan: 'Labor 1.3',
+    nomor_lab: '1.3',
+    peran: 'PJ Lab',
+    is_active: true,
+  },
+  {
+    nama: 'Ahmad Idris',
+    kampus: 'Kampus Thehok',
+    ruangan: 'Labor 1.4',
+    nomor_lab: '1.4',
+    peran: 'PJ Lab',
+    is_active: true,
+  },
+  {
+    nama: 'Delvio Pasha',
+    kampus: 'Kampus Thehok',
+    ruangan: 'Labor 1.5',
+    nomor_lab: '1.5',
+    peran: 'PJ Lab',
+    is_active: true,
+  },
+  {
+    nama: 'Bayu Zaidan Azizi',
+    kampus: 'Kampus Thehok',
+    ruangan: 'Labor 2.7',
+    nomor_lab: '2.7',
+    peran: 'PJ Lab',
+    is_active: true,
+  },
+  {
+    nama: 'Rezky Cahya Gandana',
+    kampus: 'Kampus Thehok',
+    ruangan: 'Labor 3.1',
+    nomor_lab: '3.1',
+    peran: 'PJ Lab',
+    is_active: true,
+  },
+  {
+    nama: 'Andi Noor',
+    kampus: 'Kampus Thehok',
+    ruangan: 'Labor 3.2',
+    nomor_lab: '3.2',
+    peran: 'PJ Lab',
+    is_active: true,
+  },
+  {
+    nama: 'Zuan Vivaldi',
+    kampus: 'Kampus Thehok',
+    ruangan: 'Labor 3.4',
+    nomor_lab: '3.4',
+    peran: 'PJ Lab',
+    is_active: true,
+  },
+  {
+    nama: 'Trio Prananda',
+    kampus: 'Kampus Thehok',
+    ruangan: 'Labor 4.1',
+    nomor_lab: '4.1',
+    peran: 'PJ Lab',
+    is_active: true,
+  },
+  {
+    nama: 'Rafli Maulana',
+    kampus: 'Kampus Thehok',
+    ruangan: 'Labor 4.3',
+    nomor_lab: '4.3',
     peran: 'PJ Lab',
     is_active: true,
   },
@@ -73,8 +156,8 @@ async function main() {
     `;
     console.log('✅ Index asisten_lab_kampus_ruangan_nama_idx terverifikasi.');
 
-    // 3. Upsert data asisten lab Kobar
-    for (const item of asistenKobarList) {
+    // 3. Upsert data asisten lab Kobar & Thehok
+    for (const item of asistenList) {
       await client`
         INSERT INTO public.asisten_lab (
           nama,
@@ -107,13 +190,13 @@ async function main() {
     const rows = await client`
       SELECT id, nama, kampus, ruangan, nomor_lab, peran, is_active 
       FROM public.asisten_lab 
-      ORDER BY id ASC;
+      ORDER BY kampus ASC, ruangan ASC;
     `;
 
     console.log('\n📋 Data Asisten Lab saat ini di Database:');
     console.table(rows);
 
-    console.log('\n🎉 Selesai seeding Asisten Lab Kobar!');
+    console.log('\n🎉 Selesai seeding Asisten Lab Kobar & Thehok!');
   } catch (err) {
     console.error('❌ Gagal seeding asisten lab:', err);
     process.exit(1);
