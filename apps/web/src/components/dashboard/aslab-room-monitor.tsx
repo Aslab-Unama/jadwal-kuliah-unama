@@ -451,7 +451,7 @@ export function AslabRoomMonitor({
           // Hari Ini: Evaluasi realtime berdasarkan jam
           const liveClass = sorted.find((c) => {
             const s = timeToMinutes(c.waktuMulai);
-            const duration = c.sks ? c.sks * 50 : 100;
+            const duration = c.sks ? c.sks * 45 : 90;
             const end = c.waktuSelesai ? timeToMinutes(c.waktuSelesai) : s + duration;
             return currentMins >= s && currentMins < end;
           });
@@ -466,7 +466,7 @@ export function AslabRoomMonitor({
           } else {
             const firstStart = timeToMinutes(sorted[0].waktuMulai);
             const lastClass = sorted[sorted.length - 1];
-            const lastDuration = lastClass.sks ? lastClass.sks * 50 : 100;
+            const lastDuration = lastClass.sks ? lastClass.sks * 45 : 90;
             const lastEnd = lastClass.waktuSelesai
               ? timeToMinutes(lastClass.waktuSelesai)
               : timeToMinutes(lastClass.waktuMulai) + lastDuration;
@@ -1592,14 +1592,14 @@ export function AslabRoomMonitor({
                       const isSameDay = !prevCls?.tanggal || !cls.tanggal || prevCls.tanggal === cls.tanggal;
                       const isFirstClassOfDay = !prevCls || !isSameDay;
                       const prevStart = prevCls ? timeToMinutes(prevCls.waktuMulai) : 0;
-                      const prevDuration = prevCls?.sks ? prevCls.sks * 50 : 100;
+                      const prevDuration = prevCls?.sks ? prevCls.sks * 45 : 90;
                       const prevEnd = prevCls
                         ? prevCls.waktuSelesai
                           ? timeToMinutes(prevCls.waktuSelesai)
                           : prevStart + prevDuration
                         : 0;
                       const curStart = timeToMinutes(cls.waktuMulai);
-                      const curDuration = cls.sks ? cls.sks * 50 : 100;
+                      const curDuration = cls.sks ? cls.sks * 45 : 90;
                       const curEnd = cls.waktuSelesai
                         ? timeToMinutes(cls.waktuSelesai)
                         : curStart + curDuration;
