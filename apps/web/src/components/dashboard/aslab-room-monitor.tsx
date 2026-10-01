@@ -542,6 +542,8 @@ export function AslabRoomMonitor({
           c.kodeKelas.toLowerCase().includes(searchRoom.toLowerCase())
       );
 
+    const isLongName = room.displayName.length > 11;
+
     return (
       <button
         key={`${room.kampus}-${room.ruangan}`}
@@ -551,17 +553,39 @@ export function AslabRoomMonitor({
           setModalPage(1);
         }}
         className={cn(
-          "group relative flex flex-col items-center justify-center p-3 rounded-none text-center transition-all cursor-pointer shadow-xs min-h-[74px]",
+          "group relative flex flex-col items-center justify-center rounded-none text-center transition-all cursor-pointer shadow-xs",
+          isFullscreen
+            ? "px-2 py-3 sm:px-2.5 sm:py-3.5 min-h-[82px] sm:min-h-[92px] md:min-h-[98px]"
+            : "px-2 py-2.5 sm:px-2.5 sm:py-3 min-h-[74px]",
           "hover:opacity-95 hover:shadow-md hover:scale-[1.01] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
           room.colorClass,
           !isHighlighted && "opacity-25 grayscale-[60%]"
         )}
         title={`Klik untuk melihat jadwal ${room.displayName} (${room.subtitle})`}
       >
-        <span className="font-bold text-xs sm:text-sm text-white leading-tight tracking-tight line-clamp-1">
+        <span
+          className={cn(
+            "font-bold text-white leading-tight tracking-tight text-center line-clamp-2",
+            isFullscreen
+              ? isLongName
+                ? "text-xs sm:text-sm md:text-sm lg:text-[15px]"
+                : "text-sm sm:text-base md:text-base lg:text-lg"
+              : isLongName
+              ? "text-[11px] sm:text-xs"
+              : "text-xs sm:text-sm"
+          )}
+        >
           {room.displayName}
         </span>
-        <span className={cn("text-[11px] font-medium leading-tight mt-1", room.subtitleColor)}>
+        <span
+          className={cn(
+            "leading-tight mt-1 line-clamp-1",
+            isFullscreen
+              ? "text-[11px] sm:text-xs md:text-xs font-medium"
+              : "text-[11px] font-medium",
+            room.subtitleColor
+          )}
+        >
           {room.subtitle}
         </span>
       </button>
