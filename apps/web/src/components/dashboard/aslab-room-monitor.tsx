@@ -423,6 +423,7 @@ export function AslabRoomMonitor({
 
       let status: RoomGridStatus = "kosong";
       let subtitle = "Kosong";
+      let jamAwal: string | null = null;
       let colorClass = "bg-rose-500 hover:bg-rose-600 text-white border-transparent";
       let badgeColor = "bg-rose-500 text-white border-transparent";
       let dotColor = "bg-white";
@@ -440,6 +441,7 @@ export function AslabRoomMonitor({
         if (isPast) {
           status = "selesai";
           subtitle = `Selesai (${sorted.length} Kelas)`;
+          jamAwal = sorted[0].waktuMulai;
           colorClass = "bg-slate-500 hover:bg-slate-600 text-white border-transparent";
           badgeColor = "bg-slate-500 text-white border-transparent";
           dotColor = "bg-white/80";
@@ -447,6 +449,7 @@ export function AslabRoomMonitor({
         } else if (isFuture) {
           status = "terjadwal";
           subtitle = `Terjadwal (${sorted.length} Kelas)`;
+          jamAwal = sorted[0].waktuMulai;
           colorClass = "bg-blue-500 hover:bg-blue-600 text-white border-transparent";
           badgeColor = "bg-blue-500 text-white border-transparent";
           dotColor = "bg-white";
@@ -463,6 +466,7 @@ export function AslabRoomMonitor({
           if (liveClass) {
             status = "dipakai";
             subtitle = "Sedang Dipakai";
+            jamAwal = liveClass.waktuMulai;
             colorClass = "bg-emerald-500 hover:bg-emerald-600 text-white border-transparent";
             badgeColor = "bg-emerald-500 text-white border-transparent";
             dotColor = "bg-white animate-pulse";
@@ -478,6 +482,7 @@ export function AslabRoomMonitor({
             if (currentMins < firstStart) {
               status = "terjadwal";
               subtitle = `Terjadwal (${sorted.length} Kelas)`;
+              jamAwal = sorted[0].waktuMulai;
               colorClass = "bg-blue-500 hover:bg-blue-600 text-white border-transparent";
               badgeColor = "bg-blue-500 text-white border-transparent";
               dotColor = "bg-white";
@@ -485,13 +490,16 @@ export function AslabRoomMonitor({
             } else if (currentMins >= lastEnd) {
               status = "selesai";
               subtitle = `Selesai (${sorted.length} Kelas)`;
+              jamAwal = sorted[0].waktuMulai;
               colorClass = "bg-slate-500 hover:bg-slate-600 text-white border-transparent";
               badgeColor = "bg-slate-500 text-white border-transparent";
               dotColor = "bg-white/80";
               subtitleColor = "text-slate-100";
             } else {
+              const nextClass = sorted.find((c) => timeToMinutes(c.waktuMulai) > currentMins);
               status = "jeda";
               subtitle = "Jeda";
+              jamAwal = nextClass?.waktuMulai ?? sorted[0].waktuMulai;
               colorClass = "bg-amber-500 hover:bg-amber-600 text-white border-transparent";
               badgeColor = "bg-amber-500 text-white border-transparent";
               dotColor = "bg-white";
@@ -509,6 +517,7 @@ export function AslabRoomMonitor({
         isLabor: room.isLabor,
         status,
         subtitle,
+        jamAwal,
         colorClass,
         badgeColor,
         dotColor,
@@ -588,6 +597,19 @@ export function AslabRoomMonitor({
         >
           {room.subtitle}
         </span>
+        {room.jamAwal && (
+          <span
+            className={cn(
+              "font-mono font-bold tracking-tight leading-tight mt-0.5",
+              isFullscreen
+                ? "text-xs sm:text-sm md:text-sm"
+                : "text-[11px] sm:text-xs",
+              room.subtitleColor
+            )}
+          >
+            {room.jamAwal.replace(/\s*WIB/i, "").trim()}
+          </span>
+        )}
       </button>
     );
   };
@@ -624,7 +646,7 @@ export function AslabRoomMonitor({
 
         {/* Quick Tabs & Action Button: 3 Kolom Kompak di Mobile, Baris Elegan di Desktop */}
         <div className="grid grid-cols-3 sm:flex sm:flex-row items-stretch sm:items-center gap-1 sm:gap-2 pt-1 sm:pt-0">
-          {isFullscreen && (
+          {isFullscreen && activeTab !== "matriks" && (
             <>
               <LiveRunningClock className="h-7.5 sm:h-8 py-0 justify-center shrink-0 text-xs font-mono font-bold" />
               <div className="h-5 w-px bg-border mx-0.5 hidden sm:block" />
@@ -1427,6 +1449,12 @@ export function AslabRoomMonitor({
 
             {/* Legenda Warna Status Persis Sesuai Screenshot */}
             <div className="flex flex-wrap items-center gap-2.5 sm:gap-4 text-xs font-medium">
+              {isFullscreen && (
+                <>
+                  <LiveRunningClock className="h-7 py-0 px-2.5 justify-center shrink-0 text-xs font-mono font-bold mr-1 sm:mr-2" />
+                  <div className="h-4 w-px bg-border mx-0.5 hidden sm:block" />
+                </>
+              )}
               <span className="inline-flex items-center gap-1.5 text-foreground">
                 <span className="size-2.5 rounded-full bg-emerald-500 ring-2 ring-emerald-500/20" />
                 <span>Dipakai</span>

@@ -148,6 +148,7 @@ export interface RoomGridItem {
   isLabor: boolean;
   status: RoomGridStatus;
   subtitle: string;
+  jamAwal?: string | null;
   colorClass: string;
   badgeColor: string;
   dotColor: string;
