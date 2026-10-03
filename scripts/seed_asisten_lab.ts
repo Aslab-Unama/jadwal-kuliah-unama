@@ -12,7 +12,7 @@ interface AsistenLabData {
 const asistenList: AsistenLabData[] = [
   // Kampus Kobar
   {
-    nama: 'Dwi Cahaya Medika',
+    nama: 'Dwi Cahya Medika',
     kampus: 'Kampus Kobar',
     ruangan: 'Labor 1.5',
     nomor_lab: '1.5',
