@@ -872,7 +872,7 @@ export const app = new Elysia()
                 .select()
                 .from(logNotifikasiPerubahan)
                 .where(eq(logNotifikasiPerubahan.statusKirim, 'PENDING'))
-                .orderBy(asc(logNotifikasiPerubahan.idLog))
+                .orderBy(desc(logNotifikasiPerubahan.idLog))
                 .limit(limit);
 
               return {
