@@ -68,6 +68,15 @@ export async function runScrapeSync(options: ScrapeSyncOptions = {}): Promise<Sc
   log(`📌 Konfigurasi Scraping: Ruang: ${ruangDescription}, Tanggal: ${dateDescription}`);
 
   try {
+    // 0. Sebelum sync umum menimpa data, sinkronkan status Cancel & Online terlebih dahulu
+    // agar perubahan status (TM -> Cancel / Online) tercatat ke log_notifikasi_perubahan
+    try {
+      log('🔍 [Pre-Sync] Mendeteksi perubahan status terkini sebelum sync utama...');
+      await runStatusChangeSync(log);
+    } catch (statusPreSyncErr: any) {
+      log(`⚠️ [Pre-Sync] Gagal menjalankan pre-status sync: ${statusPreSyncErr?.message || statusPreSyncErr}`);
+    }
+
     if (options.cleanDb) {
       log('🗑️  Menghapus seluruh data jadwal lama dari database Supabase...');
       await db.delete(jadwalLab);

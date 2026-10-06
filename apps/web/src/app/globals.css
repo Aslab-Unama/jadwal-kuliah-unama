@@ -49,21 +49,23 @@
 
 :root {
   color-scheme: light;
+  --background: oklch(0.975 0.003 260);
+  --foreground: oklch(0.18 0.01 260);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.18 0.01 260);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
+  --popover-foreground: oklch(0.18 0.01 260);
   --primary: oklch(0.205 0 0);
   --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.945 0.004 260);
+  --secondary-foreground: oklch(0.18 0.01 260);
+  --muted: oklch(0.945 0.004 260);
+  --muted-foreground: oklch(0.48 0.01 260);
+  --accent: oklch(0.945 0.004 260);
+  --accent-foreground: oklch(0.18 0.01 260);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
+  --border: oklch(0.89 0.006 260);
+  --input: oklch(0.89 0.006 260);
   --ring: oklch(0.708 0 0);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
@@ -71,16 +73,14 @@
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar: oklch(0.975 0.003 260);
+  --sidebar-foreground: oklch(0.18 0.01 260);
   --sidebar-primary: oklch(0.205 0 0);
   --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-accent: oklch(0.945 0.004 260);
+  --sidebar-accent-foreground: oklch(0.18 0.01 260);
+  --sidebar-border: oklch(0.89 0.006 260);
   --sidebar-ring: oklch(0.708 0 0);
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
 }
 
 .dark {
@@ -129,5 +129,162 @@
 
   html {
     @apply font-sans;
+  }
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm 12mm 12mm 12mm;
+  }
+
+  /* RESET MUTLAK TINTA PRINTER: SEMUA LATAR PUTIH & HILANGKAN BORDER KOTAK CONTAINER */
+  :root,
+  .dark,
+  html,
+  body {
+    color-scheme: light !important;
+    --background: #ffffff !important;
+    --foreground: #000000 !important;
+    --card: #ffffff !important;
+    --card-foreground: #000000 !important;
+    --popover: #ffffff !important;
+    --popover-foreground: #000000 !important;
+    --primary: #000000 !important;
+    --primary-foreground: #ffffff !important;
+    --secondary: #ffffff !important;
+    --secondary-foreground: #000000 !important;
+    --muted: #ffffff !important;
+    --muted-foreground: #4b5563 !important;
+    --accent: #ffffff !important;
+    --accent-foreground: #000000 !important;
+    --border: transparent !important;
+    --input: transparent !important;
+    --ring: transparent !important;
+    background-color: #ffffff !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* TIMPA SEMUA ELEMEN: TIDAK ADA BACKGROUND GELAP & TIDAK ADA BAYANGAN */
+  *,
+  *::before,
+  *::after {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  .dark,
+  .dark body,
+  .dark main,
+  .dark div,
+  .dark section,
+  .dark header,
+  .dark footer,
+  .dark table,
+  .dark tr,
+  .dark td,
+  .dark th {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  /* HILANGKAN SEMUA BORDER KOTAK/CARD CONTAINER (HEMAT TINTA: HAPUS KOTAK BERTUMPUK) */
+  .bg-card,
+  .bg-muted,
+  .bg-muted\/10,
+  .bg-muted\/15,
+  .bg-muted\/20,
+  .bg-muted\/30,
+  .bg-muted\/40,
+  .bg-muted\/60,
+  main,
+  section,
+  article,
+  .shadow-xs,
+  .shadow-sm,
+  .shadow-md,
+  .shadow-2xs,
+  div:not(.border-b-2):not(.border-t-2),
+  section:not(.border-b-2):not(.border-t-2) {
+    border-color: transparent !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+  }
+
+  [class*="border-dashed"],
+  .border-dashed {
+    border: none !important;
+  }
+
+  /* SEMBUNYIKAN KONTROL FORM & TOMBOL WEB (TIDAK PERLU DICETAK DI KERTAS) */
+  button:not(.print-allow),
+  input,
+  select,
+  textarea,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* BORDER HANYA ADA DI TABEL DATA AGAR TETAP TERSTRUKTUR & RAPIH */
+  table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+    table-layout: auto !important;
+    border: 1px solid #9ca3af !important;
+  }
+
+  table th {
+    background-color: #f3f4f6 !important;
+    color: #000000 !important;
+    border: 1px solid #9ca3af !important;
+    font-weight: 700 !important;
+  }
+
+  table td {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    border: 1px solid #d1d5db !important;
+  }
+
+  /* Izinkan garis pembatas horizontal resmi (Kop Surat & Header) */
+  .border-b-2,
+  .border-t-2 {
+    border-color: #000000 !important;
+  }
+
+  .print\:block {
+    display: block !important;
+  }
+
+  .print\:flex {
+    display: flex !important;
+  }
+
+  .print\:grid {
+    display: grid !important;
+  }
+
+  .print\:table {
+    display: table !important;
+  }
+
+  tr,
+  .break-inside-avoid,
+  .print-avoid-break {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  tfoot {
+    display: table-footer-group;
   }
 }

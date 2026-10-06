@@ -27,8 +27,9 @@ export interface PaginationMeta {
 
 export interface JadwalApiResponse {
   success: boolean;
-  pagination: PaginationMeta;
+  pagination?: PaginationMeta;
   data: JadwalItem[];
+  error?: string;
 }
 
 export interface JadwalSummaryData {

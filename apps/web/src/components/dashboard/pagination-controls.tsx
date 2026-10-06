@@ -44,7 +44,7 @@ export function PaginationControls({
   const pages = getPageNumbers();
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-3">
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-3 print:hidden">
       {/* Items per page selector */}
       <div className="flex items-center gap-2 text-xs text-muted-foreground order-2 sm:order-1">
         <span>Baris per halaman:</span>

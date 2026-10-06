@@ -8,21 +8,29 @@ function getCookie(name: string): string | null {
 }
 
 import * as React from "react";
+import dynamic from "next/dynamic";
 import { Header } from "@/components/dashboard/header";
 import { ScheduleGrid } from "@/components/dashboard/schedule-grid";
-import { ScheduleDetailDialog } from "@/components/dashboard/schedule-detail-dialog";
-import { AslabAttendanceDialog } from "@/components/dashboard/aslab-attendance-dialog";
 import { PaginationControls } from "@/components/dashboard/pagination-controls";
-import { AslabRoomMonitor } from "@/components/dashboard/aslab-room-monitor";
+
+const ScheduleDetailDialog = dynamic(
+  () => import("@/components/dashboard/schedule-detail-dialog").then((m) => m.ScheduleDetailDialog),
+  { ssr: false }
+);
+
+const AslabAttendanceDialog = dynamic(
+  () => import("@/components/dashboard/aslab-attendance-dialog").then((m) => m.AslabAttendanceDialog),
+  { ssr: false }
+);
 import { AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useGlobalModalHistory } from "@/hooks/use-dialog-history";
 import {
-  useAslabItems,
   useJadwalStore,
   useJadwalSummary,
   usePaginatedJadwal,
 } from "@/stores/use-jadwal-store";
+import { onDayChange } from "@/lib/time-sync";
 
 export default function HomePage() {
   // Zustand Store Selectors
@@ -41,35 +49,76 @@ export default function HomePage() {
   const isAslab = useJadwalStore((s) => s.isAslab);
   const setIsAslab = useJadwalStore((s) => s.setIsAslab);
   const fetchAllSchedules = useJadwalStore((s) => s.fetchAllSchedules);
+  const syncDateToTodayIfStale = useJadwalStore((s) => s.syncDateToTodayIfStale);
   const refresh = useJadwalStore((s) => s.refresh);
 
   // Derived in-memory state hooks (no backend roundtrips on date/filter/search/pagination)
-  const aslabItems = useAslabItems();
   const summary = useJadwalSummary();
   const { items, totalFiltered, totalPages } = usePaginatedJadwal();
 
   // Global Mobile History Manager (Android back button & swipe back support)
   useGlobalModalHistory();
 
-  // Inisialisasi status Aslab dan fetch seluruh database ke state sekali di awal
+  // Inisialisasi status Aslab, cek kesegaran tanggal hari ini, dan fetch seluruh database ke state
   React.useEffect(() => {
     setIsAslab(getCookie("aslab_logged_in") === "true");
+    syncDateToTodayIfStale();
     fetchAllSchedules();
-  }, [fetchAllSchedules, setIsAslab]);
+  }, [fetchAllSchedules, setIsAslab, syncDateToTodayIfStale]);
+
+  // Otomatis sinkronkan tanggal jika terjadi pergantian hari (misal lewat jam 00:00:00 WIB atau tab dibuka kembali)
+  React.useEffect(() => {
+    const unsubscribe = onDayChange(() => {
+      syncDateToTodayIfStale();
+    });
+    return () => unsubscribe();
+  }, [syncDateToTodayIfStale]);
 
   const handleRefresh = async () => {
     await refresh();
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-muted/30 dark:bg-background text-foreground">
+    <div className="flex min-h-screen flex-col bg-muted/30 dark:bg-background text-foreground print:bg-white print:text-black print:min-h-0">
       {/* Header Bar */}
       <Header onRefresh={handleRefresh} isRefreshing={isRefreshing} />
 
       {/* Main Content Area */}
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8 space-y-6">
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8 space-y-6 print:max-w-none print:w-full print:p-0 print:m-0 print:space-y-4">
+        {/* KOP RESMI CETAK (HANYA MUNCUL DI PRINT / PDF) */}
+        <div className="hidden print:block pb-2 print-avoid-break">
+          <div className="flex items-center justify-between gap-4 border-b-2 border-black pb-3">
+            <div className="flex items-center gap-3.5">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/unama.png"
+                alt="Logo UNAMA"
+                className="h-14 w-auto object-contain shrink-0"
+              />
+              <div>
+                <h2 className="text-sm font-black uppercase tracking-wide text-black leading-tight">
+                  UNIVERSITAS DINAMIKA BANGSA (UNAMA) JAMBI
+                </h2>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-black leading-tight">
+                  PORTAL INFORMASI JADWAL PERKULIAHAN MAHASISWA
+                </h3>
+                <p className="text-[10px] text-neutral-800 leading-tight mt-0.5 font-medium">
+                  Semester Ganjil 2026/2027 &bull; unama.ac.id
+                </p>
+              </div>
+            </div>
+            <div className="text-right text-[9px] border-l border-neutral-400 pl-3 shrink-0">
+              <div className="font-mono font-bold text-black uppercase">SALINAN SISTEM</div>
+              <div className="font-mono text-neutral-900 mt-0.5">
+                {new Date().toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+              </div>
+            </div>
+          </div>
+          <div className="border-t border-black mt-0.5" />
+        </div>
+
         {/* Intro Banner */}
-        <section className="space-y-1">
+        <section className="space-y-1 print:hidden">
           <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2">
             <div>
               <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
@@ -82,20 +131,9 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Panel Monitoring Khusus Aslab (Di atas Jadwal Mahasiswa) */}
-        {isAslab && (
-          <AslabRoomMonitor
-            items={aslabItems}
-            selectedDate={selectedDate}
-            onDateChange={setSelectedDate}
-            globalKampus={filters.kampus}
-            onSelectItem={(item) => setSelectedItem(item, true)}
-          />
-        )}
-
         {/* Error Alert State (Antislop R-27 Compliant) */}
         {error && (
-          <section aria-label="Pemberitahuan Kesalahan" className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-destructive">
+          <section aria-label="Pemberitahuan Kesalahan" className="rounded-none border border-destructive/30 bg-destructive/10 p-4 text-destructive print:hidden">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <AlertCircle className="size-5 shrink-0" />
@@ -150,7 +188,7 @@ export default function HomePage() {
       <AslabAttendanceDialog />
 
       {/* Public Footer */}
-      <footer className="mt-auto border-t border-border/80 bg-muted/20 py-6 text-xs text-muted-foreground">
+      <footer className="mt-auto border-t border-border/80 bg-muted/20 py-6 text-xs text-muted-foreground print:hidden">
         <div className="mx-auto flex max-w-7xl flex-col sm:flex-row items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
           <div className="text-center sm:text-left">
             <p className="font-medium text-foreground">

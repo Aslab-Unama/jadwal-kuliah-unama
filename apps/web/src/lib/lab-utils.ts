@@ -49,7 +49,9 @@ export const UNAMA_LABS = [
   "Labor 1.8",
   "Labor 1.9",
   "Labor 2.7",
+  "Labor 3.1",
   "Labor 3.2",
+  "Labor 3.4",
   "Labor 4.1",
   "Labor Cisco 4.3",
   "Gedung Pasca, Lab. B2.3",
@@ -246,13 +248,17 @@ export function getCampusForRoom(room: string, items?: JadwalItem[]): string {
     return "Kampus Kobar";
   }
 
-  // 5. Ruangan Teori Kampus Kobar (R. 2.2, R. 2.3, R. 2.11 - R. 2.18)
+  // 5. Ruangan Teori Kampus Kobar (R. 2.2, R. 2.3, R. 2.10, R. 2.11 - R. 2.18)
   // Dicocokkan secara presisi agar tidak salah mencocokkan Lab B2.3 atau Labor 2.3 Thehok
   if (
-    /(?:^|[^a-z0-9])r\.?\s*2\.(?:2|3|1[1-8])\b/i.test(lower) ||
-    /(?:^|[^a-z0-9])ruang(?:an)?\s*2\.(?:2|3|1[1-8])\b/i.test(lower)
+    /(?:^|[^a-z0-9])r\.?\s*2\.(?:2|3|1[0-8])\b/i.test(lower) ||
+    /(?:^|[^a-z0-9])ruang(?:an)?\s*2\.(?:2|3|1[0-8])\b/i.test(lower)
   ) {
-    return "Kampus Kobar";
+    // Catatan: Jika ada R. 2.10 Thehok, data jadwal aktual UNAMA biasanya menyertakan kampus = "Thehok"
+    // yang sudah ditangani pada poin 1 di atas.
+    if (!lower.includes("thehok")) {
+      return "Kampus Kobar";
+    }
   }
 
   // Default ke Kampus Thehok (kampus utama)

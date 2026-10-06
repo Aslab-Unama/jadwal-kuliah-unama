@@ -9,20 +9,22 @@ import { triggerSyncToday, triggerSyncFull, triggerStatusChangeSync, getCronStat
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
 const HOST = process.env.HOST || '0.0.0.0';
 
-// Global API Limiter: 30 request per menit per IP (sangat aman untuk backend & kuota Redis)
-// Karena frontend memakai Zustand in-memory store, user normal hanya perlu 1 request di awal.
+// Global API Limiter: 120 request per menit per IP
 const apiRateLimiter = new InMemoryRateLimiter({
   windowMs: 60 * 1000,
-  maxRequests: 30,
+  maxRequests: 120,
   message: 'Too many requests',
 });
 
-// Auth Route Limiter: 10 request per menit per IP (mencegah brute force secret code)
+// Auth Route Limiter: 15 request per menit per IP (mencegah brute force secret code)
 const authRateLimiter = new InMemoryRateLimiter({
   windowMs: 60 * 1000,
-  maxRequests: 10,
+  maxRequests: 15,
   message: 'Too many requests',
 });
+
+// Single-Flight Mutex untuk /api/jadwal?all=true (mencegah thundering herd pada database Supabase)
+let pendingAllDbFetch: Promise<any[]> | null = null;
 
 export const app = new Elysia()
   .use(
@@ -57,11 +59,15 @@ export const app = new Elysia()
       }
     }
 
-    // Rate limit umum untuk semua route API (30 req / menit)
-    // Kecualikan /api/cron agar trigger scheduler/Google Apps Script tidak pernah terblokir
-    if (url.pathname.startsWith('/api/') && !url.pathname.startsWith('/api/cron')) {
+    // Rate limit umum untuk semua route API (120 req / menit)
+    // Kecualikan /api/time (probe waktu) dan /api/cron agar tidak pernah terblokir
+    if (
+      url.pathname.startsWith('/api/') &&
+      !url.pathname.startsWith('/api/time') &&
+      !url.pathname.startsWith('/api/cron')
+    ) {
       const check = apiRateLimiter.check(clientIp);
-      set.headers['X-RateLimit-Limit'] = '30';
+      set.headers['X-RateLimit-Limit'] = '120';
       set.headers['X-RateLimit-Remaining'] = check.remaining.toString();
       set.headers['X-RateLimit-Reset'] = Math.ceil(check.resetMs / 1000).toString();
 
@@ -171,29 +177,62 @@ export const app = new Elysia()
               }
             }
 
-            // 2. Cache MISS / Fresh: Query Supabase PostgreSQL dengan kolom esensial (tanpa createdAt/updatedAt agar payload ringan)
-            const items = await db
-              .select({
-                id: jadwalLab.id,
-                hari: jadwalLab.hari,
-                tanggal: jadwalLab.tanggal,
-                waktuMulai: jadwalLab.waktuMulai,
-                dosen: jadwalLab.dosen,
-                kodeKelas: jadwalLab.kodeKelas,
-                mataKuliah: jadwalLab.mataKuliah,
-                kampus: jadwalLab.kampus,
-                ruangan: jadwalLab.ruangan,
-                status: jadwalLab.status,
-                sks: jadwalLab.sks,
-                waktuSelesai: jadwalLab.waktuSelesai,
-              })
-              .from(jadwalLab)
-              .where(whereClause)
-              .orderBy(asc(jadwalLab.waktuMulai), asc(jadwalLab.id));
+            // 2. Cache MISS / Fresh: Query Supabase PostgreSQL dengan Single-Flight Mutex (Anti-Thundering Herd)
+            let items: any[];
+            if (!hasUserFilters) {
+              if (!pendingAllDbFetch) {
+                pendingAllDbFetch = (async () => {
+                  try {
+                    return await db
+                      .select({
+                        id: jadwalLab.id,
+                        hari: jadwalLab.hari,
+                        tanggal: jadwalLab.tanggal,
+                        waktuMulai: jadwalLab.waktuMulai,
+                        dosen: jadwalLab.dosen,
+                        kodeKelas: jadwalLab.kodeKelas,
+                        mataKuliah: jadwalLab.mataKuliah,
+                        kampus: jadwalLab.kampus,
+                        ruangan: jadwalLab.ruangan,
+                        status: jadwalLab.status,
+                        sks: jadwalLab.sks,
+                        waktuSelesai: jadwalLab.waktuSelesai,
+                      })
+                      .from(jadwalLab)
+                      .where(whereClause)
+                      .orderBy(asc(jadwalLab.waktuMulai), asc(jadwalLab.id));
+                  } finally {
+                    pendingAllDbFetch = null;
+                  }
+                })();
+              }
+              items = await pendingAllDbFetch;
+            } else {
+              items = await db
+                .select({
+                  id: jadwalLab.id,
+                  hari: jadwalLab.hari,
+                  tanggal: jadwalLab.tanggal,
+                  waktuMulai: jadwalLab.waktuMulai,
+                  dosen: jadwalLab.dosen,
+                  kodeKelas: jadwalLab.kodeKelas,
+                  mataKuliah: jadwalLab.mataKuliah,
+                  kampus: jadwalLab.kampus,
+                  ruangan: jadwalLab.ruangan,
+                  status: jadwalLab.status,
+                  sks: jadwalLab.sks,
+                  waktuSelesai: jadwalLab.waktuSelesai,
+                })
+                .from(jadwalLab)
+                .where(whereClause)
+                .orderBy(asc(jadwalLab.waktuMulai), asc(jadwalLab.id));
+            }
 
-            // 3. Simpan ke Redis jika query tanpa filter tambahan
+            // 3. Simpan ke Redis & L1 di BACKGROUND (TIDAK MEMBLOKIR response HTTP ke client!)
             if (!hasUserFilters && items.length > 0) {
-              await setCachedAllJadwal(items);
+              setCachedAllJadwal(items).catch((err) =>
+                log.warn(`⚠️ Background cache write error: ${err}`)
+              );
             }
 
             return {
@@ -607,7 +646,33 @@ export const app = new Elysia()
                 namaAsisten,
               } = body;
 
-              // 1. Validasi fingerprint unik untuk anti duplikasi
+              // 1. Validasi hari ini (hanya jadwal hari ini yang boleh diabsen)
+              const todayWibStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' }); // YYYY-MM-DD
+              let parsedTanggalIso = body.tanggalIso;
+              if (!parsedTanggalIso) {
+                const months: Record<string, string> = {
+                  januari: '01', februari: '02', maret: '03', april: '04',
+                  mei: '05', juni: '06', juli: '07', agustus: '08',
+                  september: '09', oktober: '10', november: '11', desember: '12'
+                };
+                const parts = tanggal.trim().split(' ');
+                if (parts.length === 3) {
+                  const day = parts[0].padStart(2, '0');
+                  const month = months[parts[1].toLowerCase()] || '01';
+                  const year = parts[2];
+                  parsedTanggalIso = `${year}-${month}-${day}`;
+                }
+              }
+
+              if (parsedTanggalIso && parsedTanggalIso !== todayWibStr) {
+                set.status = 400;
+                return {
+                  success: false,
+                  message: 'Belum bisa absen. Absensi hanya dapat dilakukan untuk perkuliahan hari ini.',
+                };
+              }
+
+              // 2. Validasi fingerprint unik untuk anti duplikasi
               const fingerprint = `${tanggal.trim()}_${kodeKelas.trim()}_${ruangan.trim()}_${waktuMulai.trim()}`;
 
               const existing = await db

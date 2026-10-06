@@ -28,6 +28,7 @@ import { cn } from "cn";
 import { LiveRunningClock } from "./aslab-room-monitor";
 import { useJadwalStore } from "@/stores/use-jadwal-store";
 import { isLabRoom } from "@/lib/lab-utils";
+import { isDateToday } from "@/lib/time-sync";
 
 function getCookie(name: string): string | null {
   if (typeof document === "undefined") return null;
@@ -214,15 +215,28 @@ export function ScheduleDetailDialog({ item, onClose }: ScheduleDetailDialogProp
 
                 {/* Tombol Absen Lab khusus ketika dibuka dari Panel Monitoring Aslab dan merupakan ruangan Laboratorium */}
                 {isAslab && isFromAslabMonitor && isLabRoom(activeItem.ruangan) && (
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={() => openAttendanceModal(activeItem, parentRoom)}
-                    className="rounded-none bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 h-9 text-xs font-medium cursor-pointer shadow-2xs"
-                  >
-                    <CheckCircle2 className="size-3.5" />
-                    <span>Absen Lab</span>
-                  </Button>
+                  isDateToday(activeItem.tanggal) ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => openAttendanceModal(activeItem, parentRoom)}
+                      className="rounded-none bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 h-9 text-xs font-medium cursor-pointer shadow-2xs font-semibold"
+                    >
+                      <CheckCircle2 className="size-3.5" />
+                      <span>Absen Lab</span>
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled
+                      title="Absensi hanya tersedia untuk jadwal hari ini"
+                      className="rounded-none bg-muted/70 text-muted-foreground border border-border gap-1.5 h-9 text-xs font-medium cursor-not-allowed opacity-75 select-none"
+                    >
+                      <Clock className="size-3.5 text-muted-foreground/80" />
+                      <span>Belum bisa absen</span>
+                    </Button>
+                  )
                 )}
               </div>
 

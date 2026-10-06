@@ -9,9 +9,32 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge, RealtimeStatusBadge, MethodBadge } from "./status-badge";
+import dynamic from "next/dynamic";
 import { FilterBar } from "./filter-bar";
-import { ScheduleTable } from "./schedule-table";
 import { StatsOverview } from "./stats-overview";
+
+const ScheduleTable = dynamic(
+  () => import("./schedule-table").then((m) => m.ScheduleTable),
+  {
+    loading: () => (
+      <div className="overflow-hidden border border-border bg-card shadow-xs">
+        <div className="p-6 space-y-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-4 py-3.5 border-b border-border/40 last:border-0">
+              <Skeleton className="h-8 w-[16%]" />
+              <Skeleton className="h-10 w-[32%]" />
+              <Skeleton className="h-6 w-[23%]" />
+              <Skeleton className="h-6 w-[16%]" />
+              <Skeleton className="h-6 w-[8%]" />
+              <Skeleton className="h-6 w-[5%]" />
+            </div>
+          ))}
+        </div>
+      </div>
+    ),
+    ssr: false,
+  }
+);
 import { JadwalFilters, JadwalItem, JadwalSummaryData, formatDosenName } from "@/lib/types";
 import { useGlobalTime, getRealtimeScheduleStatus, getTodayWib } from "@/lib/time-sync";
 import {
@@ -102,17 +125,17 @@ export function ScheduleGrid({
     <section
       aria-label="Daftar Jadwal Kuliah"
       className={cn(
-        "relative border border-border bg-card p-4 sm:p-6 shadow-xs space-y-4",
+        "relative border border-border bg-card p-4 sm:p-6 shadow-xs space-y-4 print:border-none print:shadow-none print:p-0 print:bg-transparent",
         className
       )}
     >
       {/* Header Panel Jadwal Kuliah */}
-      <div className="flex flex-col gap-4 pb-4 border-b border-border/70 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-col gap-4 pb-4 border-b border-border/70 lg:flex-row lg:items-center lg:justify-between print:border-b-2 print:border-black print:pb-2">
         <div className="space-y-1 shrink-0">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 print:hidden">
             <Badge
               variant="outline"
-              className="text-[10px] font-semibold tracking-wide uppercase border-border bg-muted/60 text-foreground"
+              className="text-xs font-medium border-border bg-muted/60 text-foreground"
             >
               <GraduationCap className="size-3 mr-1 text-primary" />
               Sesi Perkuliahan
@@ -128,7 +151,7 @@ export function ScheduleGrid({
 
         {/* Ringkasan Statistik Jadwal (Screenshot 1 dipindahkan ke sisi kanan header) */}
         {summary && (
-          <div className="w-full lg:w-auto lg:min-w-[560px] xl:min-w-[620px] shrink-0">
+          <div className="w-full lg:w-auto lg:min-w-[560px] xl:min-w-[620px] shrink-0 print:hidden">
             <StatsOverview
               totalJadwal={summary.totalJadwal}
               totalCancel={summary.totalCancel}
@@ -173,25 +196,25 @@ export function ScheduleGrid({
           ))}
         </div>
       ) : items.length === 0 ? (
-        <div className="border border-dashed border-border p-8 bg-muted/10 text-center">
-          <Empty className="p-4">
-            <EmptyMedia variant="icon">
+        <div className="border border-dashed border-border p-8 bg-muted/10 text-center print:border-none print:p-4 print:bg-transparent">
+          <Empty className="p-4 print:p-0">
+            <EmptyMedia variant="icon" className="print:hidden">
               <SearchX className="size-6 text-muted-foreground" />
             </EmptyMedia>
             <EmptyHeader>
-              <EmptyTitle className="text-base font-semibold">
+              <EmptyTitle className="text-base font-semibold print:text-sm print:text-black">
                 {selectedDate
                   ? "Tidak Ada Jadwal pada Tanggal Ini"
                   : "Jadwal Tidak Ditemukan"}
               </EmptyTitle>
-              <EmptyDescription className="text-xs max-w-md mx-auto mt-1">
+              <EmptyDescription className="text-xs max-w-md mx-auto mt-1 print:text-neutral-700">
                 {selectedDate
                   ? "Tidak ditemukan sesi perkuliahan aktif untuk tanggal yang dipilih atau berada di luar kalender akademik semester aktif."
                   : "Tidak ada kelas yang cocok dengan kombinasi filter atau pencarian Anda."}
               </EmptyDescription>
             </EmptyHeader>
 
-            <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
+            <div className="flex flex-wrap items-center justify-center gap-2 mt-4 print:hidden">
               {selectedDate && onDateChange ? (
                 <Popover>
                   <PopoverTrigger className="inline-flex items-center gap-1.5 h-8 px-3 text-xs font-medium border border-border bg-background hover:bg-muted/60 transition-colors cursor-pointer select-none rounded-none shadow-2xs">
@@ -250,7 +273,8 @@ export function ScheduleGrid({
           onDateChange={onDateChange}
         />
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 print:hidden">
           {items.map((item) => {
             const realtime = getRealtimeScheduleStatus(item, currentMins);
 
@@ -335,6 +359,17 @@ export function ScheduleGrid({
         );
       })}
       </div>
+      <div className="hidden print:block">
+          <ScheduleTable
+            items={items}
+            isLoading={false}
+            onSelectItem={onSelectItem}
+            onResetFilters={onResetFilters}
+            selectedDate={selectedDate}
+            onDateChange={onDateChange}
+          />
+        </div>
+      </>
       )}
 
       {/* Slot Kontrol Paginasi */}

@@ -87,7 +87,7 @@ export function LoginForm({
           setCookie("aslab_logged_in", "true");
         }
         setTimeout(() => {
-          window.location.href = "/";
+          window.location.href = "/dashboard";
         }, 500);
       } else {
         setError(
@@ -101,7 +101,7 @@ export function LoginForm({
         setCookie("aslab_token", "dev-local-session");
         setCookie("aslab_logged_in", "true");
         setTimeout(() => {
-          window.location.href = "/";
+          window.location.href = "/dashboard";
         }, 500);
       } else {
         setError("Koneksi ke backend gagal atau secret code tidak sesuai.");

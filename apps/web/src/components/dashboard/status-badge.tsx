@@ -51,7 +51,7 @@ export function RealtimeStatusBadge({
         )}
         suppressHydrationWarning
       >
-        <span className="size-1.5 rounded-full bg-white animate-ping" />
+        <span className="size-1.5 rounded-full bg-white shrink-0" />
         Berlangsung
       </Badge>
     );

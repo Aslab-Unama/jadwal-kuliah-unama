@@ -74,25 +74,25 @@ export function ScheduleTable({
 
   if (items.length === 0) {
     return (
-      <div className="border border-dashed border-border p-8 bg-card text-center shadow-xs">
-        <Empty className="p-4">
-          <EmptyMedia variant="icon">
+      <div className="border border-dashed border-border p-8 bg-card text-center shadow-xs print:border-none print:shadow-none print:bg-transparent print:p-4">
+        <Empty className="p-4 print:p-0">
+          <EmptyMedia variant="icon" className="print:hidden">
             <SearchX className="size-6 text-muted-foreground" />
           </EmptyMedia>
           <EmptyHeader>
-            <EmptyTitle className="text-base font-semibold">
+            <EmptyTitle className="text-base font-semibold print:text-sm print:text-black">
               {selectedDate
                 ? "Tidak Ada Jadwal pada Tanggal Ini"
                 : "Jadwal Tidak Ditemukan"}
             </EmptyTitle>
-            <EmptyDescription className="text-xs max-w-md mx-auto mt-1">
+            <EmptyDescription className="text-xs max-w-md mx-auto mt-1 print:text-neutral-700">
               {selectedDate
                 ? "Tidak ditemukan sesi perkuliahan aktif untuk tanggal yang dipilih atau berada di luar kalender akademik semester aktif."
                 : "Tidak ada kelas yang cocok dengan kombinasi filter atau pencarian Anda."}
             </EmptyDescription>
           </EmptyHeader>
 
-          <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
+          <div className="flex flex-wrap items-center justify-center gap-2 mt-4 print:hidden">
             {selectedDate && onDateChange ? (
               <Popover>
                 <PopoverTrigger className="inline-flex items-center gap-1.5 h-8 px-3 text-xs font-medium border border-border bg-background hover:bg-muted/60 transition-colors cursor-pointer select-none rounded-none shadow-2xs">
@@ -145,9 +145,9 @@ export function ScheduleTable({
   }
 
   return (
-    <div className="overflow-hidden border border-border bg-card shadow-xs">
+    <div className="overflow-hidden border border-border bg-card shadow-xs print:border-none print:shadow-none print:bg-transparent">
       {/* Petunjuk swipe horizontal khusus mobile */}
-      <div className="sm:hidden flex items-center justify-between px-3 py-1.5 bg-muted/40 border-b border-border text-[11px] text-muted-foreground select-none">
+      <div className="sm:hidden flex items-center justify-between px-3 py-1.5 bg-muted/40 border-b border-border text-[11px] text-muted-foreground select-none print:hidden">
         <span>&larr; Geser ke samping untuk kolom lengkap &rarr;</span>
       </div>
 
@@ -155,22 +155,22 @@ export function ScheduleTable({
         <Table className="table-fixed w-full min-w-[760px]">
           <TableHeader className="bg-muted/40 border-b border-border">
             <TableRow className="hover:bg-transparent">
-              <TableHead className="pl-4 sm:pl-6 w-[120px] sm:w-[15%] min-w-[120px] font-semibold text-xs text-foreground uppercase tracking-wider">
+              <TableHead className="pl-4 sm:pl-6 w-[120px] sm:w-[15%] min-w-[120px] font-semibold text-xs text-foreground">
                 Waktu
               </TableHead>
-              <TableHead className="w-[220px] sm:w-[28%] min-w-[200px] font-semibold text-xs text-foreground uppercase tracking-wider">
+              <TableHead className="w-[220px] sm:w-[28%] min-w-[200px] font-semibold text-xs text-foreground">
                 Mata Kuliah
               </TableHead>
-              <TableHead className="w-[160px] sm:w-[22%] min-w-[150px] font-semibold text-xs text-foreground uppercase tracking-wider">
-                Dosen
+              <TableHead className="w-[160px] sm:w-[22%] min-w-[150px] font-semibold text-xs text-foreground">
+                Dosen Pengampu
               </TableHead>
-              <TableHead className="w-[120px] sm:w-[15%] min-w-[120px] font-semibold text-xs text-foreground uppercase tracking-wider">
+              <TableHead className="w-[120px] sm:w-[15%] min-w-[120px] font-semibold text-xs text-foreground">
                 Ruangan
               </TableHead>
-              <TableHead className="w-[100px] sm:w-[12%] min-w-[100px] font-semibold text-xs text-foreground uppercase tracking-wider">
+              <TableHead className="w-[100px] sm:w-[12%] min-w-[100px] font-semibold text-xs text-foreground">
                 Status
               </TableHead>
-              <TableHead className="pr-4 sm:pr-6 w-[70px] sm:w-[8%] min-w-[70px] font-semibold text-xs text-foreground uppercase tracking-wider">
+              <TableHead className="pr-4 sm:pr-6 w-[70px] sm:w-[8%] min-w-[70px] font-semibold text-xs text-foreground">
                 Metode
               </TableHead>
             </TableRow>

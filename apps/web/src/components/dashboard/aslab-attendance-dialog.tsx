@@ -42,6 +42,7 @@ import {
 } from "lucide-react";
 import { cn } from "cn";
 import { useJadwalStore } from "@/stores/use-jadwal-store";
+import { isDateToday } from "@/lib/time-sync";
 
 interface AslabAttendanceDialogProps {
   item?: JadwalItem | null;
@@ -226,7 +227,14 @@ export function AslabAttendanceDialog({
     namaAsisten: effectiveNamaAsisten,
   };
 
+  const isToday = isDateToday(effectiveItem.tanggal);
+
   const handleKirimAbsensi = async () => {
+    if (!isToday) {
+      setFeedbackMessage("Belum bisa absen. Absensi hanya dapat dilakukan untuk jadwal hari ini.");
+      return;
+    }
+
     if (!effectiveNamaAsisten) {
       setFeedbackMessage("Mohon pilih atau masukkan nama asisten lab.");
       return;
@@ -355,6 +363,13 @@ export function AslabAttendanceDialog({
               <div className="p-2.5 bg-destructive/10 border border-destructive/30 text-destructive text-xs flex items-center gap-2">
                 <ShieldAlert className="size-4 shrink-0" />
                 <span>{feedbackMessage}</span>
+              </div>
+            )}
+
+            {!isToday && !feedbackMessage && (
+              <div className="p-2.5 bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 text-xs flex items-center gap-2">
+                <Clock className="size-4 shrink-0" />
+                <span>Absensi hanya dapat dilakukan untuk jadwal perkuliahan hari ini.</span>
               </div>
             )}
 
@@ -498,25 +513,37 @@ export function AslabAttendanceDialog({
 
             {/* Tombol Eksekusi Kirim Absen Otomatis (Primary) */}
             {!alreadySubmitted && !submitSuccess && (
-              <Button
-                type="button"
-                size="sm"
-                onClick={handleKirimAbsensi}
-                disabled={isSubmitting || !effectiveNamaAsisten}
-                className="w-full sm:w-auto rounded-none bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 text-xs h-9 cursor-pointer shadow-2xs font-semibold justify-center shrink-0"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="size-3.5 animate-spin" />
-                    <span>Mengirim...</span>
-                  </>
-                ) : (
-                  <>
-                    <Send className="size-3.5" />
-                    <span>Kirim Absen Sekarang</span>
-                  </>
-                )}
-              </Button>
+              isToday ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleKirimAbsensi}
+                  disabled={isSubmitting || !effectiveNamaAsisten}
+                  className="w-full sm:w-auto rounded-none bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 text-xs h-9 cursor-pointer shadow-2xs font-semibold justify-center shrink-0"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="size-3.5 animate-spin" />
+                      <span>Mengirim...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className="size-3.5" />
+                      <span>Kirim Absen Sekarang</span>
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled
+                  className="w-full sm:w-auto rounded-none bg-muted/70 text-muted-foreground border border-border gap-1.5 text-xs h-9 cursor-not-allowed opacity-75 select-none justify-center shrink-0"
+                >
+                  <Clock className="size-3.5 text-muted-foreground/80" />
+                  <span>Belum bisa absen</span>
+                </Button>
+              )
             )}
           </div>
         </DialogFooter>

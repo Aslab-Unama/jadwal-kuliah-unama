@@ -11,9 +11,34 @@ import { id as localeId } from "date-fns/locale";
 let globalClockOffsetMs = 0;
 let isClockSynchronized = false;
 let syncPromise: Promise<number> | null = null;
+let lastKnownWibDateStr = "";
 const listeners = new Set<() => void>();
+const dayChangeListeners = new Set<(newDate: Date) => void>();
+
+export function checkDayRollover(): boolean {
+  const currentWibDateStr = getGlobalNow().toLocaleDateString("en-CA", { timeZone: "Asia/Jakarta" });
+  if (!lastKnownWibDateStr) {
+    lastKnownWibDateStr = currentWibDateStr;
+    return false;
+  }
+  if (currentWibDateStr !== lastKnownWibDateStr) {
+    lastKnownWibDateStr = currentWibDateStr;
+    const [year, month, day] = currentWibDateStr.split("-").map(Number);
+    const newToday = new Date(year, month - 1, day);
+    dayChangeListeners.forEach((listener) => {
+      try {
+        listener(newToday);
+      } catch {
+        // Ignore listener error
+      }
+    });
+    return true;
+  }
+  return false;
+}
 
 function notifyListeners() {
+  checkDayRollover();
   listeners.forEach((listener) => {
     try {
       listener();
@@ -21,6 +46,16 @@ function notifyListeners() {
       // Ignore listener error
     }
   });
+}
+
+/**
+ * Mendaftarkan callback ketika terjadi pergantian hari (misal lewat tengah malam WIB atau kembali ke tab esok harinya)
+ */
+export function onDayChange(callback: (newToday: Date) => void): () => void {
+  dayChangeListeners.add(callback);
+  return () => {
+    dayChangeListeners.delete(callback);
+  };
 }
 
 /**
@@ -134,9 +169,15 @@ if (typeof window !== "undefined") {
   // Sinkronisasi ulang saat tab kembali aktif
   window.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {
+      checkDayRollover();
       syncGlobalTime();
     }
   });
+
+  // Periksa pergantian hari setiap 15 detik (misal tepat melintasi tengah malam 00:00:00 WIB)
+  setInterval(() => {
+    checkDayRollover();
+  }, 15 * 1000);
 
   // Sinkronisasi ulang berkala setiap 5 menit
   setInterval(() => {
@@ -176,21 +217,42 @@ export function getGlobalMinutesWib(): number {
   return h * 60 + m;
 }
 
+// High-Performance Caching untuk Operasi Tanggal WIB
+let cachedTodayWibDate: Date | null = null;
+let cachedTodayWibExpiry = 0;
+
+let cachedTodayDbFormatStr = "";
+let cachedTodayDbFormatExpiry = 0;
+
+const dbDateParseCache = new Map<string, Date | null>();
+
 /**
- * Tanggal hari ini (WIB) sebagai Date object jam 00:00:00
+ * Tanggal hari ini (WIB) sebagai Date object jam 00:00:00 (Dicache 5 detik agar looping 15.000 item instan)
  */
 export function getTodayWib(): Date {
+  const nowMs = Date.now();
+  if (cachedTodayWibDate && nowMs < cachedTodayWibExpiry) {
+    return cachedTodayWibDate;
+  }
   const now = getGlobalNow();
   const wibDateStr = now.toLocaleDateString("en-CA", { timeZone: "Asia/Jakarta" });
   const [year, month, day] = wibDateStr.split("-").map(Number);
-  return new Date(year, month - 1, day);
+  cachedTodayWibDate = new Date(year, month - 1, day);
+  cachedTodayWibExpiry = nowMs + 5000;
+  return cachedTodayWibDate;
 }
 
 /**
  * Tanggal hari ini (WIB) dalam format database BAAK: "dd MMMM yyyy" (contoh: "25 September 2026")
  */
 export function getTodayDbFormat(): string {
-  return format(getTodayWib(), "dd MMMM yyyy", { locale: localeId });
+  const nowMs = Date.now();
+  if (cachedTodayDbFormatStr && nowMs < cachedTodayDbFormatExpiry) {
+    return cachedTodayDbFormatStr;
+  }
+  cachedTodayDbFormatStr = format(getTodayWib(), "dd MMMM yyyy", { locale: localeId });
+  cachedTodayDbFormatExpiry = nowMs + 5000;
+  return cachedTodayDbFormatStr;
 }
 
 const INDO_MONTHS: Record<string, number> = {
@@ -208,16 +270,31 @@ const INDO_MONTHS: Record<string, number> = {
   desember: 11,
 };
 
+/**
+ * Parsing format BAAK "dd MMMM yyyy" ke Date.
+ * Dimemoize via Map karena hanya ada ~120 variasi tanggal unik sepanjang 1 semester (15.000x lebih cepat).
+ */
 export function parseDateFromDbString(str: string): Date | null {
   if (!str) return null;
+  const cached = dbDateParseCache.get(str);
+  if (cached !== undefined) return cached;
+
   const parts = str.trim().split(" ");
-  if (parts.length !== 3) return null;
+  if (parts.length !== 3) {
+    dbDateParseCache.set(str, null);
+    return null;
+  }
   const day = parseInt(parts[0], 10);
   const monthName = parts[1].toLowerCase();
   const year = parseInt(parts[2], 10);
   const month = INDO_MONTHS[monthName];
-  if (isNaN(day) || month === undefined || isNaN(year)) return null;
-  return new Date(year, month, day);
+  if (isNaN(day) || month === undefined || isNaN(year)) {
+    dbDateParseCache.set(str, null);
+    return null;
+  }
+  const parsed = new Date(year, month, day);
+  dbDateParseCache.set(str, parsed);
+  return parsed;
 }
 
 /**
@@ -225,7 +302,14 @@ export function parseDateFromDbString(str: string): Date | null {
  */
 export function isDateToday(tanggalStr?: string): boolean {
   if (!tanggalStr) return false;
-  return tanggalStr.trim().toLowerCase() === getTodayDbFormat().toLowerCase();
+  // Perbandingan string langsung (instan O(1))
+  if (tanggalStr.trim().toLowerCase() === getTodayDbFormat().toLowerCase()) {
+    return true;
+  }
+  const parsed = parseDateFromDbString(tanggalStr);
+  if (!parsed) return false;
+  const today = getTodayWib();
+  return parsed.getTime() === today.getTime();
 }
 
 /**
@@ -235,8 +319,7 @@ export function isDatePast(tanggalStr?: string): boolean {
   if (!tanggalStr) return false;
   const parsed = parseDateFromDbString(tanggalStr);
   if (!parsed) return false;
-  const today = getTodayWib();
-  return parsed.getTime() < today.getTime();
+  return parsed.getTime() < getTodayWib().getTime();
 }
 
 /**
@@ -246,8 +329,7 @@ export function isDateFuture(tanggalStr?: string): boolean {
   if (!tanggalStr) return false;
   const parsed = parseDateFromDbString(tanggalStr);
   if (!parsed) return false;
-  const today = getTodayWib();
-  return parsed.getTime() > today.getTime();
+  return parsed.getTime() > getTodayWib().getTime();
 }
 
 /**

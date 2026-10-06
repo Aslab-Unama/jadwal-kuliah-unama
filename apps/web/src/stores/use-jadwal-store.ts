@@ -35,16 +35,18 @@ export interface JadwalStoreState {
   // Actions
   fetchAllSchedules: (force?: boolean, fresh?: boolean) => Promise<void>;
   setSelectedDate: (date: Date | null) => void;
+  syncDateToTodayIfStale: () => boolean;
   setFilters: (newFilters: Partial<JadwalFilters>) => void;
   resetFilters: () => void;
   setViewMode: (mode: "grid" | "table") => void;
   openRoomModal: (room: RoomGridItem) => void;
   openDetailModal: (item: JadwalItem, fromAslabMonitor?: boolean, parentRoom?: RoomGridItem) => void;
   openAttendanceModal: (item: JadwalItem, parentRoom?: RoomGridItem) => void;
+  restoreModal: (modal: ActiveModal | null) => void;
   closeModal: (fromPopstate?: boolean) => void;
   setSelectedItem: (item: JadwalItem | null, fromAslabMonitor?: boolean) => void;
   setIsAslab: (isAslab: boolean) => void;
-  refresh: () => Promise<void>;
+  refresh: (hard?: boolean) => Promise<void>;
 
   // Getters / Selectors
   getCurrentDateRawItems: () => JadwalItem[];
@@ -97,40 +99,68 @@ export const useJadwalStore = create<JadwalStoreState>((set, get) => {
       return;
     }
 
+    // Tampilkan skeleton seketika pada semua path
     if (force || fresh) {
-      set({ isRefreshing: true });
+      set({
+        isLoading: true,
+        isRefreshing: true,
+        allSchedules: [],
+        error: null,
+      });
     } else {
-      set({ isLoading: true });
+      set({
+        isLoading: true,
+        allSchedules: [],
+        error: null,
+      });
     }
-    set({ error: null });
+
+    const startTime = Date.now();
 
     try {
       // Panggil backend dengan all: true (sertakan fresh jika dipicu tombol perbarui)
       const res = await fetchJadwalList({ all: true, fresh });
 
-      if (res.success && res.data) {
+      // Pastikan ada jeda transisi minimum (~350ms) agar skeleton terlihat jelas dan transisi data mulus
+      const elapsed = Date.now() - startTime;
+      if (elapsed < 350) {
+        await new Promise((resolve) => setTimeout(resolve, 350 - elapsed));
+      }
+
+      if (res.success && res.data && res.data.length > 0) {
         // Perkuliahan dimulai minimal pukul 08:00 WIB (jadwal sebelum jam 08:00 seperti 00:00 diabaikan)
         const validData = res.data.filter(
           (i) => i.waktuMulai && i.waktuMulai >= "08:00"
         );
 
-        set({
-          allSchedules: validData,
-          isLoading: false,
-          isRefreshing: false,
-          error: null,
-        });
+        if (validData.length > 0) {
+          set({
+            allSchedules: validData,
+            isLoading: false,
+            isRefreshing: false,
+            error: null,
+          });
+        } else {
+          set({
+            allSchedules: [],
+            isLoading: false,
+            isRefreshing: false,
+            error: "Data jadwal perkuliahan belum tersedia.",
+          });
+        }
       } else {
         set({
+          allSchedules: [],
           isLoading: false,
           isRefreshing: false,
-          error: "Gagal memuat jadwal kuliah. Silakan coba kembali.",
+          error: res.error || "Gagal memuat jadwal kuliah dari server. Silakan coba kembali.",
         });
       }
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Terjadi kendala saat memuat data database";
       set({
+        allSchedules: [],
         isLoading: false,
         isRefreshing: false,
         error: message,
@@ -152,6 +182,30 @@ export const useJadwalStore = create<JadwalStoreState>((set, get) => {
         page: 1, // Reset ke halaman pertama saat ganti tanggal
       },
     }));
+  },
+
+  /**
+   * Menyinkronkan tanggal default ke hari ini (WIB) secara otomatis jika terjadi pergantian hari,
+   * atau jika tanggal yang sedang dipilih sudah usang/kemarin.
+   */
+  syncDateToTodayIfStale: () => {
+    const today = getTodayWib();
+    const todayDbStr = formatDateDb(today);
+    const { selectedDate, filters } = get();
+
+    // Jika selectedDate belum diset atau tanggal filter sama sekali tidak cocok dengan hari ini
+    if (!selectedDate || formatDateDb(selectedDate) !== todayDbStr || filters.tanggal !== todayDbStr) {
+      set((state) => ({
+        selectedDate: today,
+        filters: {
+          ...state.filters,
+          tanggal: todayDbStr,
+          page: 1,
+        },
+      }));
+      return true;
+    }
+    return false;
   },
 
   setFilters: (newFilters: Partial<JadwalFilters>) => {
@@ -196,12 +250,13 @@ export const useJadwalStore = create<JadwalStoreState>((set, get) => {
   setViewMode: (viewMode: "grid" | "table") => set({ viewMode }),
 
   openRoomModal: (room: RoomGridItem) => {
+    const modal: ActiveModal = { type: "room", room };
     set({
-      activeModal: { type: "room", room },
+      activeModal: modal,
       selectedItem: null,
       isFromAslabMonitor: false,
     });
-    pushModalHistory(1);
+    pushModalHistory(1, modal);
   },
 
   openDetailModal: (
@@ -213,17 +268,19 @@ export const useJadwalStore = create<JadwalStoreState>((set, get) => {
     const resolvedParent =
       parentRoom || (current?.type === "room" ? current.room : undefined);
 
+    const modal: ActiveModal = {
+      type: "detail",
+      item,
+      fromAslabMonitor,
+      parentRoom: resolvedParent,
+    };
+
     set({
-      activeModal: {
-        type: "detail",
-        item,
-        fromAslabMonitor,
-        parentRoom: resolvedParent,
-      },
+      activeModal: modal,
       selectedItem: item,
       isFromAslabMonitor: fromAslabMonitor,
     });
-    pushModalHistory(resolvedParent ? 2 : 1);
+    pushModalHistory(resolvedParent ? 2 : 1, modal);
   },
 
   openAttendanceModal: (item: JadwalItem, parentRoom?: RoomGridItem) => {
@@ -232,16 +289,49 @@ export const useJadwalStore = create<JadwalStoreState>((set, get) => {
       parentRoom ||
       (current?.type === "detail" ? current.parentRoom : undefined);
 
+    const modal: ActiveModal = {
+      type: "attendance",
+      item,
+      parentRoom: resolvedParent,
+    };
+
     set({
-      activeModal: {
-        type: "attendance",
-        item,
-        parentRoom: resolvedParent,
-      },
+      activeModal: modal,
       selectedItem: item,
       isFromAslabMonitor: true,
     });
-    pushModalHistory(resolvedParent ? 3 : 2);
+    pushModalHistory(resolvedParent ? 3 : 2, modal);
+  },
+
+  restoreModal: (modal: ActiveModal | null) => {
+    if (!modal) {
+      set({
+        activeModal: null,
+        selectedItem: null,
+        isFromAslabMonitor: false,
+      });
+      return;
+    }
+
+    if (modal.type === "room") {
+      set({
+        activeModal: modal,
+        selectedItem: null,
+        isFromAslabMonitor: false,
+      });
+    } else if (modal.type === "detail") {
+      set({
+        activeModal: modal,
+        selectedItem: modal.item,
+        isFromAslabMonitor: Boolean(modal.fromAslabMonitor),
+      });
+    } else if (modal.type === "attendance") {
+      set({
+        activeModal: modal,
+        selectedItem: modal.item,
+        isFromAslabMonitor: true,
+      });
+    }
   },
 
   closeModal: (fromPopstate: boolean = false) => {
@@ -300,15 +390,19 @@ export const useJadwalStore = create<JadwalStoreState>((set, get) => {
 
   /**
    * Tombol "Perbarui" / Muat Ulang:
-   * Membersihkan Redis cache dan menarik ulang seluruh isi database dari server backend ke state.
+   * Menampilkan skeleton seketika dan menarik data terbaru dari server.
+   * Menggunakan cache L1/L2 Redis untuk respon sub-detik yang sangat cepat.
+   * Parameter hard = true hanya digunakan jika ingin memaksa bypass & invalidate cache server.
    */
-  refresh: async () => {
-    try {
-      await clearRedisCache();
-    } catch {
-      // jika endpoint clear gagal, fresh request di fetchAllSchedules tetap membersihkan cache di server
+  refresh: async (hard = false) => {
+    if (hard) {
+      try {
+        await clearRedisCache();
+      } catch {
+        // jika endpoint clear gagal, fresh request di fetchAllSchedules tetap membersihkan cache di server
+      }
     }
-    await get().fetchAllSchedules(true, true);
+    await get().fetchAllSchedules(true, hard);
   },
 
   // --- In-Memory Selectors ---

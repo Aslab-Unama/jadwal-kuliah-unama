@@ -21,11 +21,13 @@ import {
   Maximize2,
   Minimize2,
   Monitor,
+  Lock,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
@@ -107,16 +109,18 @@ export function LiveRunningClock({ className }: { className?: string }) {
     setMounted(true);
   }, []);
 
+  const synced = mounted ? isSynced : false;
+
   return (
     <div
       className={cn(
         "inline-flex items-center gap-1.5 font-mono text-xs sm:text-sm font-bold bg-muted/60 border border-border px-2.5 py-1 rounded-none text-foreground select-none",
         className
       )}
-      title={isSynced ? "Waktu Global Terverifikasi (WIB)" : "Waktu Real-time Saat Ini (WIB)"}
+      title={synced ? "Waktu Global Terverifikasi (WIB)" : "Waktu Real-time Saat Ini (WIB)"}
       suppressHydrationWarning
     >
-      <Clock className={cn("size-3.5 shrink-0", isSynced ? "text-emerald-500" : "text-muted-foreground")} />
+      <Clock className={cn("size-3.5 shrink-0", synced ? "text-emerald-500" : "text-muted-foreground")} />
       <span suppressHydrationWarning>{mounted && timeWibStr ? timeWibStr : "--:-- WIB"}</span>
     </div>
   );
@@ -144,6 +148,9 @@ function formatRoomDisplayName(name: string): string {
   if (display.startsWith("R. Praktek ")) {
     display = display.replace("R. Praktek ", "R. ");
   }
+  if (display === "Labor Cisco 4.3" || display === "Labor Cisco") {
+    display = "L. Cisco 4.3";
+  }
   return display;
 }
 
@@ -152,14 +159,16 @@ function formatRoomDisplayName(name: string): string {
  * Menjamin semua ruangan tetap muncul dalam status 'Kosong' meski belum memiliki jadwal kelas pada hari tersebut.
  */
 const MASTER_ROOMS: MasterRoomDefinition[] = [
-  // --- Laboratorium Thehok ---
+  // --- Laboratorium Thehok (10 Lab) ---
   { ruangan: "Labor 1.3", displayName: "Labor 1.3", kampus: "Kampus Thehok", isLabor: true },
   { ruangan: "Labor 1.4", displayName: "Labor 1.4", kampus: "Kampus Thehok", isLabor: true },
   { ruangan: "Labor 1.5", displayName: "Labor 1.5", kampus: "Kampus Thehok", isLabor: true },
   { ruangan: "Labor 2.7", displayName: "Labor 2.7", kampus: "Kampus Thehok", isLabor: true },
+  { ruangan: "Labor 3.1", displayName: "Labor 3.1", kampus: "Kampus Thehok", isLabor: true },
   { ruangan: "Labor 3.2", displayName: "Labor 3.2", kampus: "Kampus Thehok", isLabor: true },
+  { ruangan: "Labor 3.4", displayName: "Labor 3.4", kampus: "Kampus Thehok", isLabor: true },
   { ruangan: "Labor 4.1", displayName: "Labor 4.1", kampus: "Kampus Thehok", isLabor: true },
-  { ruangan: "Labor Cisco 4.3", displayName: "Labor Cisco 4.3", kampus: "Kampus Thehok", isLabor: true },
+  { ruangan: "Labor Cisco 4.3", displayName: "L. Cisco 4.3", kampus: "Kampus Thehok", isLabor: true },
   { ruangan: "Gedung Pasca, Lab. B2.3", displayName: "S2, Lab. B2.3", kampus: "Kampus Thehok", isLabor: true },
 
   // --- Laboratorium Kobar (5 Lab Resmi UNAMA) ---
@@ -169,12 +178,10 @@ const MASTER_ROOMS: MasterRoomDefinition[] = [
   { ruangan: "Labor 1.8", displayName: "Labor 1.8", kampus: "Kampus Kobar", isLabor: true },
   { ruangan: "Labor 1.9", displayName: "Labor 1.9", kampus: "Kampus Kobar", isLabor: true },
 
-  // --- Ruangan Teori Thehok ---
+  // --- Ruangan Teori Thehok (20 Ruangan) ---
   { ruangan: "R. 1.6", displayName: "R. 1.6", kampus: "Kampus Thehok", isLabor: false },
   { ruangan: "R. 1.7", displayName: "R. 1.7", kampus: "Kampus Thehok", isLabor: false },
   { ruangan: "R. 2.10", displayName: "R. 2.10", kampus: "Kampus Thehok", isLabor: false },
-  { ruangan: "R. Praktek 3.1", displayName: "R. 3.1", kampus: "Kampus Thehok", isLabor: false },
-  { ruangan: "R. Praktek 3.4", displayName: "R. 3.4", kampus: "Kampus Thehok", isLabor: false },
   { ruangan: "R. 3.5", displayName: "R. 3.5", kampus: "Kampus Thehok", isLabor: false },
   { ruangan: "R. 3.6", displayName: "R. 3.6", kampus: "Kampus Thehok", isLabor: false },
   { ruangan: "R. 3.7", displayName: "R. 3.7", kampus: "Kampus Thehok", isLabor: false },
@@ -182,18 +189,21 @@ const MASTER_ROOMS: MasterRoomDefinition[] = [
   { ruangan: "R. 3.9", displayName: "R. 3.9", kampus: "Kampus Thehok", isLabor: false },
   { ruangan: "R. 3.10", displayName: "R. 3.10", kampus: "Kampus Thehok", isLabor: false },
   { ruangan: "R. 4.2", displayName: "R. 4.2", kampus: "Kampus Thehok", isLabor: false },
+  { ruangan: "R. 4.4", displayName: "R. 4.4", kampus: "Kampus Thehok", isLabor: false },
   { ruangan: "R. 4.5", displayName: "R. 4.5", kampus: "Kampus Thehok", isLabor: false },
   { ruangan: "R. 4.6", displayName: "R. 4.6", kampus: "Kampus Thehok", isLabor: false },
   { ruangan: "R. 4.7", displayName: "R. 4.7", kampus: "Kampus Thehok", isLabor: false },
   { ruangan: "R. 4.8", displayName: "R. 4.8", kampus: "Kampus Thehok", isLabor: false },
   { ruangan: "R. 4.9", displayName: "R. 4.9", kampus: "Kampus Thehok", isLabor: false },
+  { ruangan: "R. Dosen", displayName: "R. Dosen", kampus: "Kampus Thehok", isLabor: false },
   { ruangan: "Gedung Pasca, R. B1.2", displayName: "S2, R. B1.2", kampus: "Kampus Thehok", isLabor: false },
   { ruangan: "Gedung Pasca, R. B1.3", displayName: "S2, R. B1.3", kampus: "Kampus Thehok", isLabor: false },
   { ruangan: "Gedung Pasca, R. B3.4", displayName: "S2, R. B3.4", kampus: "Kampus Thehok", isLabor: false },
 
-  // --- Ruangan Teori Kobar ---
+  // --- Ruangan Teori Kobar (11 Ruangan) ---
   { ruangan: "R. 2.2", displayName: "R. 2.2", kampus: "Kampus Kobar", isLabor: false },
   { ruangan: "R. 2.3", displayName: "R. 2.3", kampus: "Kampus Kobar", isLabor: false },
+  { ruangan: "R. 2.10", displayName: "R. 2.10", kampus: "Kampus Kobar", isLabor: false },
   { ruangan: "R. 2.11", displayName: "R. 2.11", kampus: "Kampus Kobar", isLabor: false },
   { ruangan: "R. 2.12", displayName: "R. 2.12", kampus: "Kampus Kobar", isLabor: false },
   { ruangan: "R. 2.13", displayName: "R. 2.13", kampus: "Kampus Kobar", isLabor: false },
@@ -213,11 +223,34 @@ function matchesRoom(item: JadwalItem, room: MasterRoomDefinition): boolean {
   const origNorm = room.ruangan.trim().toLowerCase();
   const rawNorm = item.ruangan.trim().toLowerCase();
 
-  return itemNorm === roomNorm || rawNorm === origNorm || itemNorm === origNorm || rawNorm === roomNorm;
+  if (itemNorm === roomNorm || rawNorm === origNorm || itemNorm === origNorm || rawNorm === roomNorm) {
+    return true;
+  }
+
+  // Khusus penamaan variasi di BAAK:
+  // "R. Praktek 3.1" atau "Labor 3.1"
+  if (room.ruangan === "Labor 3.1" && (rawNorm === "r. praktek 3.1" || rawNorm === "labor 3.1" || rawNorm === "lab 3.1")) {
+    return true;
+  }
+  // "R. Praktek 3.4" atau "Labor 3.4"
+  if (room.ruangan === "Labor 3.4" && (rawNorm === "r. praktek 3.4" || rawNorm === "labor 3.4" || rawNorm === "lab 3.4")) {
+    return true;
+  }
+  // "Labor Cisco 4.3" atau "Labor 4.3" atau "Lab Cisco 4.3"
+  if (room.ruangan === "Labor Cisco 4.3" && (rawNorm.includes("4.3") && (rawNorm.includes("cisco") || rawNorm.includes("labor") || rawNorm.includes("lab")))) {
+    return true;
+  }
+  // "Gedung Pasca, Lab. B2.3" atau "Lab. B2.3" atau "S2, Lab. B2.3"
+  if (room.ruangan.includes("B2.3") && rawNorm.includes("b2.3")) {
+    return true;
+  }
+
+  return false;
 }
 
 interface AslabRoomMonitorProps {
   items: JadwalItem[];
+  isLoading?: boolean;
   selectedDate?: Date | null;
   onDateChange?: (date: Date | null) => void;
   globalKampus?: string;
@@ -228,6 +261,7 @@ interface AslabRoomMonitorProps {
 
 export function AslabRoomMonitor({
   items,
+  isLoading,
   selectedDate,
   onDateChange,
   globalKampus,
@@ -424,8 +458,8 @@ export function AslabRoomMonitor({
       let status: RoomGridStatus = "kosong";
       let subtitle = "Kosong";
       let jamAwal: string | null = null;
-      let colorClass = "bg-rose-500 hover:bg-rose-600 text-white border-transparent";
-      let badgeColor = "bg-rose-500 text-white border-transparent";
+      let colorClass = "bg-rose-600 hover:bg-rose-700 text-white border-transparent";
+      let badgeColor = "bg-rose-600 text-white border-transparent";
       let dotColor = "bg-white";
       let subtitleColor = "text-rose-100";
 
@@ -440,18 +474,18 @@ export function AslabRoomMonitor({
 
         if (isPast) {
           status = "selesai";
-          subtitle = `Selesai (${sorted.length} Kelas)`;
+          subtitle = `Selesai (${sorted.length})`;
           jamAwal = sorted[0].waktuMulai;
-          colorClass = "bg-slate-500 hover:bg-slate-600 text-white border-transparent";
-          badgeColor = "bg-slate-500 text-white border-transparent";
+          colorClass = "bg-slate-600 hover:bg-slate-700 text-white border-transparent";
+          badgeColor = "bg-slate-600 text-white border-transparent";
           dotColor = "bg-white/80";
           subtitleColor = "text-slate-100";
         } else if (isFuture) {
           status = "terjadwal";
-          subtitle = `Terjadwal (${sorted.length} Kelas)`;
+          subtitle = `Terjadwal (${sorted.length})`;
           jamAwal = sorted[0].waktuMulai;
-          colorClass = "bg-blue-500 hover:bg-blue-600 text-white border-transparent";
-          badgeColor = "bg-blue-500 text-white border-transparent";
+          colorClass = "bg-blue-600 hover:bg-blue-700 text-white border-transparent";
+          badgeColor = "bg-blue-600 text-white border-transparent";
           dotColor = "bg-white";
           subtitleColor = "text-blue-100";
         } else {
@@ -467,9 +501,9 @@ export function AslabRoomMonitor({
             status = "dipakai";
             subtitle = "Sedang Dipakai";
             jamAwal = liveClass.waktuMulai;
-            colorClass = "bg-emerald-500 hover:bg-emerald-600 text-white border-transparent";
-            badgeColor = "bg-emerald-500 text-white border-transparent";
-            dotColor = "bg-white animate-pulse";
+            colorClass = "bg-emerald-600 hover:bg-emerald-700 text-white border-transparent";
+            badgeColor = "bg-emerald-600 text-white border-transparent";
+            dotColor = "bg-white";
             subtitleColor = "text-emerald-100";
           } else {
             const firstStart = timeToMinutes(sorted[0].waktuMulai);
@@ -481,18 +515,18 @@ export function AslabRoomMonitor({
 
             if (currentMins < firstStart) {
               status = "terjadwal";
-              subtitle = `Terjadwal (${sorted.length} Kelas)`;
+              subtitle = `Terjadwal (${sorted.length})`;
               jamAwal = sorted[0].waktuMulai;
-              colorClass = "bg-blue-500 hover:bg-blue-600 text-white border-transparent";
-              badgeColor = "bg-blue-500 text-white border-transparent";
+              colorClass = "bg-blue-600 hover:bg-blue-700 text-white border-transparent";
+              badgeColor = "bg-blue-600 text-white border-transparent";
               dotColor = "bg-white";
               subtitleColor = "text-blue-100";
             } else if (currentMins >= lastEnd) {
               status = "selesai";
-              subtitle = `Selesai (${sorted.length} Kelas)`;
+              subtitle = `Selesai (${sorted.length})`;
               jamAwal = sorted[0].waktuMulai;
-              colorClass = "bg-slate-500 hover:bg-slate-600 text-white border-transparent";
-              badgeColor = "bg-slate-500 text-white border-transparent";
+              colorClass = "bg-slate-600 hover:bg-slate-700 text-white border-transparent";
+              badgeColor = "bg-slate-600 text-white border-transparent";
               dotColor = "bg-white/80";
               subtitleColor = "text-slate-100";
             } else {
@@ -500,8 +534,8 @@ export function AslabRoomMonitor({
               status = "jeda";
               subtitle = "Jeda";
               jamAwal = nextClass?.waktuMulai ?? sorted[0].waktuMulai;
-              colorClass = "bg-amber-500 hover:bg-amber-600 text-white border-transparent";
-              badgeColor = "bg-amber-500 text-white border-transparent";
+              colorClass = "bg-amber-600 hover:bg-amber-700 text-white border-transparent";
+              badgeColor = "bg-amber-600 text-white border-transparent";
               dotColor = "bg-white";
               subtitleColor = "text-amber-100";
             }
@@ -526,8 +560,14 @@ export function AslabRoomMonitor({
       };
     });
 
-    const naturalSort = (a: RoomGridItem, b: RoomGridItem) =>
-      a.displayName.localeCompare(b.displayName, undefined, { numeric: true });
+    const naturalSort = (a: RoomGridItem, b: RoomGridItem) => {
+      const idxA = MASTER_ROOMS.findIndex((m) => m.ruangan === a.ruangan && m.kampus === a.kampus);
+      const idxB = MASTER_ROOMS.findIndex((m) => m.ruangan === b.ruangan && m.kampus === b.kampus);
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      if (idxA !== -1) return -1;
+      if (idxB !== -1) return 1;
+      return a.displayName.localeCompare(b.displayName, undefined, { numeric: true });
+    };
 
     return {
       thehokLabs: processed.filter((r) => r.isLabor && r.kampus === "Kampus Thehok").sort(naturalSort),
@@ -564,46 +604,47 @@ export function AslabRoomMonitor({
         className={cn(
           "group relative flex flex-col items-center justify-center rounded-none text-center transition-all cursor-pointer shadow-xs",
           isFullscreen
-            ? "px-2 py-3 sm:px-2.5 sm:py-3.5 min-h-[82px] sm:min-h-[92px] md:min-h-[98px]"
-            : "px-2 py-2.5 sm:px-2.5 sm:py-3 min-h-[74px]",
-          "hover:opacity-95 hover:shadow-md hover:scale-[1.01] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            ? "px-2.5 py-3 min-h-[82px] sm:min-h-[88px]"
+            : "px-2 py-2 sm:py-2.5 min-h-[66px] sm:min-h-[72px]",
+          "border border-black/10 dark:border-white/10",
+          "hover:opacity-95 hover:shadow-md hover:scale-[1.01] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
           room.colorClass,
           !isHighlighted && "opacity-25 grayscale-[60%]"
         )}
         title={`Klik untuk melihat jadwal ${room.displayName} (${room.subtitle})`}
       >
+        <div className="absolute top-1.5 right-1.5 p-0.5 rounded-xs bg-white/15 group-hover:bg-white/25 transition-colors pointer-events-none z-10">
+          <Lock className={cn(isFullscreen ? "size-2.5 sm:size-3" : "size-2.5", "text-white/90")} />
+        </div>
+
         <span
           className={cn(
-            "font-bold text-white leading-tight tracking-tight text-center line-clamp-2",
+            "font-bold text-white leading-tight tracking-tight text-center line-clamp-1 w-full px-1",
             isFullscreen
-              ? isLongName
-                ? "text-xs sm:text-sm md:text-sm lg:text-[15px]"
-                : "text-sm sm:text-base md:text-base lg:text-lg"
-              : isLongName
-              ? "text-[11px] sm:text-xs"
-              : "text-xs sm:text-sm"
+              ? isLongName ? "text-xs sm:text-sm" : "text-sm sm:text-base"
+              : isLongName ? "text-[11px] sm:text-xs" : "text-xs sm:text-[13px]"
           )}
         >
           {room.displayName}
         </span>
         <span
           className={cn(
-            "leading-tight mt-1 line-clamp-1",
-            isFullscreen
-              ? "text-[11px] sm:text-xs md:text-xs font-medium"
-              : "text-[11px] font-medium",
+            "leading-tight line-clamp-1 w-full px-1 font-medium",
+            isFullscreen ? "text-xs mt-1" : "text-[10px] sm:text-[11px] mt-0.5",
             room.subtitleColor
           )}
         >
-          {room.subtitle}
+          {isFullscreen
+            ? room.subtitle
+                .replace(/^Terjadwal \((\d+)\)$/, "Terjadwal ($1 kelas)")
+                .replace(/^Selesai \((\d+)\)$/, "Selesai ($1 kelas)")
+            : room.subtitle}
         </span>
         {room.jamAwal && (
           <span
             className={cn(
-              "font-mono font-bold tracking-tight leading-tight mt-0.5",
-              isFullscreen
-                ? "text-xs sm:text-sm md:text-sm"
-                : "text-[11px] sm:text-xs",
+              "font-mono font-bold tracking-tight leading-tight",
+              isFullscreen ? "text-xs sm:text-sm mt-1" : "text-[10px] sm:text-[11px] mt-0.5",
               room.subtitleColor
             )}
           >
@@ -620,22 +661,13 @@ export function AslabRoomMonitor({
       aria-label="Panel Asisten Laboratorium"
       className={cn(
         "relative border border-primary/30 bg-card p-3 sm:p-6 shadow-xs transition-all",
-        isFullscreen && "fixed inset-0 z-50 overflow-y-auto bg-background p-4 sm:p-8 m-0 rounded-none border-none shadow-2xl",
+        isFullscreen && "fixed inset-0 z-50 flex flex-col h-screen max-h-screen overflow-hidden bg-background p-3 sm:p-4 m-0 rounded-none border-none shadow-2xl",
         className
       )}
     >
       {/* Header Panel Aslab */}
-      <div className="flex flex-col gap-2.5 pb-2.5 sm:pb-4 border-b border-border/70 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-2.5 pb-2.5 sm:pb-3 border-b border-border/70 sm:flex-row sm:items-center sm:justify-between shrink-0">
         <div className="space-y-0.5 sm:space-y-1">
-          <div className="flex items-center gap-2">
-            <Badge
-              variant="outline"
-              className="text-[10px] font-semibold tracking-wide uppercase border-primary/40 bg-primary/10 text-primary"
-            >
-              <ShieldCheck className="size-3 mr-1" />
-              Panel Monitoring Aslab
-            </Badge>
-          </div>
           <h3 className="text-sm sm:text-xl font-bold tracking-tight text-foreground leading-snug">
             Status Penggunaan Ruangan
           </h3>
@@ -644,73 +676,53 @@ export function AslabRoomMonitor({
           </p>
         </div>
 
-        {/* Quick Tabs & Action Button: 3 Kolom Kompak di Mobile, Baris Elegan di Desktop */}
-        <div className="grid grid-cols-3 sm:flex sm:flex-row items-stretch sm:items-center gap-1 sm:gap-2 pt-1 sm:pt-0">
-          {isFullscreen && activeTab !== "matriks" && (
-            <>
-              <LiveRunningClock className="h-7.5 sm:h-8 py-0 justify-center shrink-0 text-xs font-mono font-bold" />
-              <div className="h-5 w-px bg-border mx-0.5 hidden sm:block" />
-            </>
-          )}
-
-          <Button
-            variant={activeTab === "matriks" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setActiveTab("matriks")}
-            className={cn(
-              "h-7.5 sm:h-8 px-1 sm:px-3 gap-1 sm:gap-1.5 cursor-pointer text-[11px] sm:text-xs rounded-none justify-center transition-colors font-semibold",
-              activeTab === "matriks"
-                ? "bg-primary text-primary-foreground hover:bg-primary/90 border-transparent"
-                : "border-blue-500/40 text-blue-700 dark:text-blue-300 hover:bg-blue-500/10"
+          {/* Quick Tabs & Action Button: 3 Kolom Kompak di Mobile, Baris Elegan di Desktop */}
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 pt-1 sm:pt-0">
+            {isFullscreen && (
+              <LiveRunningClock className="h-7.5 sm:h-8 py-0 px-2.5 text-xs font-mono font-bold shrink-0 shadow-2xs" />
             )}
-          >
-            <LayoutGrid className={cn("size-3 sm:size-3.5 shrink-0", activeTab === "matriks" ? "text-primary-foreground" : "text-blue-600 dark:text-blue-400")} />
-            <span className="truncate">
-              Matriks<span className="hidden sm:inline"> Ruangan</span>
-            </span>
-          </Button>
 
-          <Button
-            variant={activeTab === "terpakai" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setActiveTab("terpakai")}
-            className="h-7.5 sm:h-8 px-1 sm:px-3 gap-1 sm:gap-1.5 cursor-pointer text-[11px] sm:text-xs rounded-none justify-center"
-          >
-            <DoorClosed className="size-3 sm:size-3.5 shrink-0" />
-            <span className="truncate">
-              <span className="hidden sm:inline">Ruang </span>Terpakai ({filteredUsedRooms.length})
-            </span>
-          </Button>
+            <Button
+              variant={activeTab === "matriks" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setActiveTab("matriks")}
+              className={cn(
+                "h-7.5 sm:h-8 px-2 sm:px-3 gap-1 sm:gap-1.5 cursor-pointer text-[11px] sm:text-xs rounded-none justify-center transition-colors font-semibold",
+                activeTab === "matriks"
+                  ? "bg-primary text-primary-foreground hover:bg-primary/90 border-transparent"
+                  : "border-blue-500/40 text-blue-700 dark:text-blue-300 hover:bg-blue-500/10"
+              )}
+            >
+              <LayoutGrid className={cn("size-3 sm:size-3.5 shrink-0", activeTab === "matriks" ? "text-primary-foreground" : "text-blue-600 dark:text-blue-400")} />
+              <span className="truncate">
+                Matriks<span className="hidden sm:inline"> Ruangan</span>
+              </span>
+            </Button>
 
-          <Button
-            variant={activeTab === "jeda_kosong" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setActiveTab("jeda_kosong")}
-            className={cn(
-              "h-7.5 sm:h-8 px-1 sm:px-3 gap-1 sm:gap-1.5 cursor-pointer text-[11px] sm:text-xs rounded-none justify-center transition-colors font-semibold",
-              activeTab === "jeda_kosong"
-                ? "bg-primary text-primary-foreground hover:bg-primary/90 border-transparent"
-                : "border-emerald-500/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/10"
-            )}
-          >
-            <Timer className={cn("size-3 sm:size-3.5 shrink-0", activeTab === "jeda_kosong" ? "text-primary-foreground" : "text-emerald-600 dark:text-emerald-400")} />
-            <span className="truncate">
-              <span className="hidden sm:inline">Cek </span>Jeda<span className="hidden sm:inline"> &amp; Ruang Kosong</span> ({filteredGaps.length})
-            </span>
-          </Button>
+            <Button
+              variant={activeTab === "terpakai" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setActiveTab("terpakai")}
+              className="h-7.5 sm:h-8 px-2 sm:px-3 gap-1 sm:gap-1.5 cursor-pointer text-[11px] sm:text-xs rounded-none justify-center"
+            >
+              <DoorClosed className="size-3 sm:size-3.5 shrink-0" />
+              <span className="truncate">
+                <span className="hidden sm:inline">Ruang </span>Terpakai ({filteredUsedRooms.length})
+              </span>
+            </Button>
+          </div>
         </div>
-      </div>
 
-      {/* Sub-Filters: Tanggal Picker, Kampus, Tipe Ruang, Pencarian */}
-      <div className="flex flex-col gap-2.5 py-2.5 sm:py-3 sm:flex-row sm:items-center sm:justify-between border-b border-border/50 text-xs">
-        {/* Kontrol Kalender & Filter Desktop */}
-        <div className="flex items-center gap-1.5 sm:gap-2">
+      {/* Sub-Filters: Unified Control Toolbar */}
+      <div className="flex flex-col gap-2.5 py-2.5 sm:py-3 sm:flex-row sm:items-center sm:justify-between border-b border-border/60 text-xs">
+        {/* Kontrol Kalender & Filter Kampus Segmented Group */}
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           {onDateChange && (
             <DateSelector selectedDate={selectedDate || null} onDateChange={onDateChange} />
           )}
 
-          <div className="hidden sm:flex sm:items-center sm:gap-2">
-            <div className="h-4 w-px bg-border mx-0.5" />
+          {/* Segmented Campus Switcher */}
+          <div className="hidden sm:inline-flex items-center border border-border bg-muted/40 p-0.5">
             {["Semua", "Kampus Thehok", "Kampus Kobar"].map((kp) => (
               <button
                 key={kp}
@@ -718,90 +730,101 @@ export function AslabRoomMonitor({
                 onClick={() => setSelectedKampus(kp)}
                 aria-pressed={selectedKampus === kp}
                 className={cn(
-                  "px-2.5 py-1 text-xs border transition-colors cursor-pointer rounded-none",
+                  "px-2.5 py-1 text-xs transition-colors cursor-pointer rounded-none",
                   selectedKampus === kp
-                    ? "border-primary bg-primary text-primary-foreground font-medium"
-                    : "border-border bg-background hover:bg-muted text-muted-foreground"
+                    ? "bg-background text-foreground font-semibold shadow-2xs border border-border/80"
+                    : "text-muted-foreground hover:text-foreground hover:bg-background/50 border border-transparent"
                 )}
               >
-                {kp}
-              </button>
-            ))}
-
-            {activeTab !== "matriks" && (
-              <>
-                <div className="h-4 w-px bg-border mx-0.5" />
-                <button
-                  type="button"
-                  onClick={() => setFilterType(filterType === "lab_only" ? "all" : "lab_only")}
-                  className={cn(
-                    "px-2.5 py-1 text-xs border transition-colors cursor-pointer flex items-center gap-1 rounded-none",
-                    filterType === "lab_only"
-                      ? "border-primary/60 bg-primary/10 text-primary font-medium"
-                      : "border-border bg-background text-muted-foreground hover:bg-muted"
-                  )}
-                >
-                  <Layers className="size-3" />
-                  <span>{filterType === "lab_only" ? "Khusus Lab" : "Semua Ruangan"}</span>
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Input Pencarian Ruangan dengan tombol reset */}
-        <div className="relative w-full sm:w-56">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3 text-muted-foreground pointer-events-none" />
-          <Input
-            value={searchRoom}
-            onChange={(e) => setSearchRoom(e.target.value)}
-            placeholder="Cari ruang / matkul..."
-            className="pl-7 pr-7 h-7.5 sm:h-7 text-xs rounded-none"
-          />
-          {searchRoom && (
-            <button
-              type="button"
-              onClick={() => setSearchRoom("")}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
-              title="Hapus pencarian"
-              aria-label="Hapus pencarian"
-            >
-              <X className="size-3" />
-            </button>
-          )}
-        </div>
-
-        {/* Tombol Filter Kampus & Khusus Lab untuk tampilan mobile */}
-        <div className="flex sm:hidden flex-col gap-1.5 pt-0.5">
-          {/* Baris 1: Filter 3 Kampus Berdampingan */}
-          <div className="grid grid-cols-3 gap-1.5 w-full">
-            {["Semua", "Kampus Thehok", "Kampus Kobar"].map((kp) => (
-              <button
-                key={kp}
-                type="button"
-                onClick={() => setSelectedKampus(kp)}
-                aria-pressed={selectedKampus === kp}
-                className={cn(
-                  "h-7.5 px-1 text-center text-xs border transition-colors cursor-pointer rounded-none truncate",
-                  selectedKampus === kp
-                    ? "border-primary bg-primary text-primary-foreground font-medium"
-                    : "border-border bg-background hover:bg-muted text-muted-foreground"
-                )}
-              >
-                {kp}
+                {kp === "Kampus Thehok" ? "Thehok" : kp === "Kampus Kobar" ? "Kobar" : kp}
               </button>
             ))}
           </div>
 
-          {/* Baris 2 (Di Bawah): Tombol Khusus Lab */}
           {activeTab !== "matriks" && (
             <button
               type="button"
               onClick={() => setFilterType(filterType === "lab_only" ? "all" : "lab_only")}
               className={cn(
-                "w-full h-7.5 px-2.5 text-xs border transition-colors cursor-pointer flex items-center justify-center gap-1.5 rounded-none font-medium",
+                "hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 text-xs border transition-colors cursor-pointer rounded-none",
                 filterType === "lab_only"
-                  ? "border-primary/60 bg-primary/10 text-primary"
+                  ? "border-primary/50 bg-primary/10 text-primary font-medium"
+                  : "border-border bg-background text-muted-foreground hover:bg-muted"
+              )}
+            >
+              <Layers className="size-3" />
+              <span>{filterType === "lab_only" ? "Khusus Lab" : "Semua Ruangan"}</span>
+            </button>
+          )}
+        </div>
+
+        {/* Sisi Kanan: Search Input & Action Tools */}
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          {activeTab === "matriks" && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={toggleFullscreen}
+              className="h-7.5 sm:h-7 px-2.5 gap-1.5 cursor-pointer text-xs rounded-none border-border hover:bg-muted font-medium shrink-0"
+              title={isFullscreen ? "Keluar Layar Penuh" : "Layar Penuh"}
+            >
+              {isFullscreen ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}
+              <span className="hidden md:inline">{isFullscreen ? "Keluar Fullscreen" : "Layar Penuh"}</span>
+            </Button>
+          )}
+
+          {/* Input Pencarian Ruangan */}
+          <div className="relative w-full sm:w-56">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3 text-muted-foreground pointer-events-none" />
+            <Input
+              value={searchRoom}
+              onChange={(e) => setSearchRoom(e.target.value)}
+              placeholder="Cari ruang / matkul..."
+              className="pl-7 pr-7 h-7.5 sm:h-7 text-xs rounded-none"
+            />
+            {searchRoom && (
+              <button
+                type="button"
+                onClick={() => setSearchRoom("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                title="Hapus pencarian"
+                aria-label="Hapus pencarian"
+              >
+                <X className="size-3" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Tombol Filter Kampus & Khusus Lab untuk tampilan mobile */}
+        <div className="flex sm:hidden flex-col gap-1.5 pt-0.5 w-full">
+          <div className="grid grid-cols-3 gap-1 w-full border border-border bg-muted/40 p-0.5">
+            {["Semua", "Kampus Thehok", "Kampus Kobar"].map((kp) => (
+              <button
+                key={kp}
+                type="button"
+                onClick={() => setSelectedKampus(kp)}
+                aria-pressed={selectedKampus === kp}
+                className={cn(
+                  "h-7 text-center text-xs transition-colors cursor-pointer rounded-none truncate",
+                  selectedKampus === kp
+                    ? "bg-background text-foreground font-semibold shadow-2xs border border-border/80"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {kp === "Kampus Thehok" ? "Thehok" : kp === "Kampus Kobar" ? "Kobar" : kp}
+              </button>
+            ))}
+          </div>
+
+          {activeTab !== "matriks" && (
+            <button
+              type="button"
+              onClick={() => setFilterType(filterType === "lab_only" ? "all" : "lab_only")}
+              className={cn(
+                "w-full h-7 px-2.5 text-xs border transition-colors cursor-pointer flex items-center justify-center gap-1.5 rounded-none font-medium",
+                filterType === "lab_only"
+                  ? "border-primary/50 bg-primary/10 text-primary"
                   : "border-border bg-background text-muted-foreground hover:bg-muted"
               )}
             >
@@ -855,7 +878,7 @@ export function AslabRoomMonitor({
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Radio className="size-4 text-primary animate-pulse" />
+                <Radio className="size-4 text-primary shrink-0" />
                 <h4 className="text-sm font-semibold text-foreground">
                   Laboratorium Komputer Terpakai ({usedLabs.length})
                 </h4>
@@ -865,7 +888,27 @@ export function AslabRoomMonitor({
               </span>
             </div>
 
-            {usedLabs.length === 0 ? (
+            {isLoading ? (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="flex flex-col justify-between gap-3 border border-border bg-card p-4 shadow-xs"
+                  >
+                    <div className="flex items-center justify-between">
+                      <Skeleton className="h-5 w-24" />
+                      <Skeleton className="h-5 w-20" />
+                    </div>
+                    <Skeleton className="h-5 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                    <div className="flex items-center justify-between pt-2 border-t border-border">
+                      <Skeleton className="h-4 w-24" />
+                      <Skeleton className="h-4 w-20" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : usedLabs.length === 0 ? (
               <div className="p-6 text-center border border-dashed border-border bg-muted/10 text-xs text-muted-foreground">
                 <DoorOpen className="size-6 mx-auto mb-2 opacity-50" />
                 Tidak ada laboratorium yang sedang terpakai pada kriteria ini.
@@ -1133,7 +1176,27 @@ export function AslabRoomMonitor({
             </span>
           </div>
 
-          {!selectedDate ? (
+          {isLoading ? (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="flex flex-col justify-between gap-3 border border-border bg-card p-4 shadow-xs"
+                >
+                  <div className="flex items-center justify-between">
+                    <Skeleton className="h-5 w-24" />
+                    <Skeleton className="h-5 w-24" />
+                  </div>
+                  <Skeleton className="h-5 w-3/4" />
+                  <Skeleton className="h-4 w-1/2" />
+                  <div className="flex items-center justify-between pt-2 border-t border-border">
+                    <Skeleton className="h-4 w-28" />
+                    <Skeleton className="h-4 w-20" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : !selectedDate ? (
             <div className="p-8 text-center border border-dashed border-border text-xs text-muted-foreground">
               Mode &quot;Semua Tanggal&quot; aktif. Silakan pilih tanggal spesifik pada kalender di atas untuk melihat estimasi jeda waktu ruangan kosong harian.
             </div>
@@ -1426,146 +1489,172 @@ export function AslabRoomMonitor({
 
       {/* KONTEN TAB 3: STATUS PENGGUNAAN RUANGAN (MATRIKS GRID SESUAI SCREENSHOT) */}
       {activeTab === "matriks" && (
-        <div className="pt-4 space-y-5">
-          {/* Top Bar Matriks: Tombol Fullscreen, Kampus Pills, dan Legenda Status */}
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 border-b border-border/60">
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={toggleFullscreen}
-                className="h-8 gap-1.5 cursor-pointer text-xs rounded-none border-border hover:bg-muted font-medium"
-              >
-                {isFullscreen ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}
-                <span>{isFullscreen ? "Keluar Layar Penuh" : "Layar Penuh"}</span>
-              </Button>
-
-              <div className="h-4 w-px bg-border mx-1 hidden sm:block" />
-
-              <span className="text-xs text-muted-foreground">
-                Total <strong>{matrixRoomData.allGridRooms.length}</strong> Ruangan Terpantau
-              </span>
+        <div className={cn("space-y-4", isFullscreen ? "pt-2 flex-1 flex flex-col overflow-y-auto" : "pt-4")}>
+          {/* Top Bar Matriks: Total Ruangan Badge & Status Legend Strip */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-1.5 border-b border-border/60 shrink-0">
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-xs font-mono font-medium rounded-none border-border bg-muted/30">
+                {matrixRoomData.allGridRooms.length} Ruangan Terpantau
+              </Badge>
             </div>
 
-            {/* Legenda Warna Status Persis Sesuai Screenshot */}
-            <div className="flex flex-wrap items-center gap-2.5 sm:gap-4 text-xs font-medium">
-              {isFullscreen && (
-                <>
-                  <LiveRunningClock className="h-7 py-0 px-2.5 justify-center shrink-0 text-xs font-mono font-bold mr-1 sm:mr-2" />
-                  <div className="h-4 w-px bg-border mx-0.5 hidden sm:block" />
-                </>
-              )}
+            {/* Legenda Warna Status Terpadu */}
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[11px] sm:text-xs font-medium text-muted-foreground bg-muted/20 px-2.5 py-0.5 sm:py-1 border border-border/50">
               <span className="inline-flex items-center gap-1.5 text-foreground">
-                <span className="size-2.5 rounded-full bg-emerald-500 ring-2 ring-emerald-500/20" />
+                <span className="size-2 rounded-full bg-emerald-600" />
                 <span>Dipakai</span>
               </span>
               <span className="inline-flex items-center gap-1.5 text-foreground">
-                <span className="size-2.5 rounded-full bg-amber-500 ring-2 ring-amber-500/20" />
+                <span className="size-2 rounded-full bg-amber-600" />
                 <span>Jeda</span>
               </span>
               <span className="inline-flex items-center gap-1.5 text-foreground">
-                <span className="size-2.5 rounded-full bg-rose-500 ring-2 ring-rose-500/20" />
+                <span className="size-2 rounded-full bg-rose-600" />
                 <span>Kosong</span>
               </span>
               <span className="inline-flex items-center gap-1.5 text-foreground">
-                <span className="size-2.5 rounded-full bg-blue-500 ring-2 ring-blue-500/20" />
+                <span className="size-2 rounded-full bg-blue-600" />
                 <span>Terjadwal</span>
               </span>
               <span className="inline-flex items-center gap-1.5 text-foreground">
-                <span className="size-2.5 rounded-full bg-slate-500 ring-2 ring-slate-500/20" />
+                <span className="size-2 rounded-full bg-slate-600" />
                 <span>Selesai</span>
               </span>
             </div>
           </div>
 
           {/* 2 Kontainer Bersisian: Laboratorium (Kiri) vs Ruangan Kelas Teori (Kanan) */}
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 items-start">
-            {/* CONTAINER 1: Laboratorium Komputer */}
-            <div className="border border-border bg-card p-4 sm:p-5 shadow-xs rounded-none space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-border">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 border border-primary/20 bg-primary/10 text-primary rounded-none">
-                    <Monitor className="size-4" />
+          {isLoading ? (
+            <div className={cn("grid grid-cols-1 xl:grid-cols-2 items-start flex-1", isFullscreen ? "gap-4 sm:gap-6" : "gap-4 sm:gap-5")}>
+              {/* SKELETON CONTAINER 1: Laboratorium Komputer */}
+              <div className={cn("border border-border shadow-xs rounded-none", isFullscreen ? "p-3.5 sm:p-5 space-y-4 bg-card" : "p-3 sm:p-4 space-y-3 bg-muted/20 dark:bg-card/40")}>
+                <div className="flex items-center justify-between pb-2 border-b border-border">
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="size-6" />
+                    <Skeleton className="h-5 w-40" />
                   </div>
-                  <h4 className="font-heading font-bold text-sm sm:text-base text-foreground tracking-tight">
-                    Laboratorium Komputer
-                  </h4>
+                  <Skeleton className="h-5 w-16" />
                 </div>
-                <Badge variant="outline" className="text-[11px] font-mono rounded-none border-border">
-                  {matrixRoomData.thehokLabs.length + matrixRoomData.kobarLabs.length} Labor
-                </Badge>
+                <div className={cn("grid grid-cols-2 sm:grid-cols-4", isFullscreen ? "gap-2.5 sm:gap-3" : "gap-2 sm:gap-2.5")}>
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <Skeleton key={i} className={cn("w-full", isFullscreen ? "h-20 sm:h-22" : "h-16 sm:h-18")} />
+                  ))}
+                </div>
               </div>
 
-              {/* Subgroup Thehok */}
-              {(selectedKampus === "Semua" || selectedKampus === "Kampus Thehok") && matrixRoomData.thehokLabs.length > 0 && (
-                <div className="space-y-2.5">
-                  <div className="flex items-center gap-2 text-xs font-mono font-semibold uppercase tracking-wider text-muted-foreground">
-                    <span className="size-1.5 bg-primary rounded-full" />
-                    <span>Kampus Thehok</span>
+              {/* SKELETON CONTAINER 2: Ruangan Kelas Teori */}
+              <div className={cn("border border-border shadow-xs rounded-none", isFullscreen ? "p-3.5 sm:p-5 space-y-4 bg-card" : "p-3 sm:p-4 space-y-3 bg-muted/20 dark:bg-card/40")}>
+                <div className="flex items-center justify-between pb-2 border-b border-border">
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="size-6" />
+                    <Skeleton className="h-5 w-40" />
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                    {matrixRoomData.thehokLabs.map((room) => renderRoomGridCard(room))}
-                  </div>
+                  <Skeleton className="h-5 w-20" />
                 </div>
-              )}
-
-              {/* Subgroup Kobar */}
-              {(selectedKampus === "Semua" || selectedKampus === "Kampus Kobar") && matrixRoomData.kobarLabs.length > 0 && (
-                <div className="space-y-2.5 pt-2 border-t border-border/60">
-                  <div className="flex items-center gap-2 text-xs font-mono font-semibold uppercase tracking-wider text-muted-foreground">
-                    <span className="size-1.5 bg-primary rounded-full" />
-                    <span>Kampus Kobar</span>
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                    {matrixRoomData.kobarLabs.map((room) => renderRoomGridCard(room))}
-                  </div>
+                <div className={cn("grid grid-cols-2 sm:grid-cols-4", isFullscreen ? "gap-2.5 sm:gap-3" : "gap-2 sm:gap-2.5")}>
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <Skeleton key={i} className={cn("w-full", isFullscreen ? "h-20 sm:h-22" : "h-16 sm:h-18")} />
+                  ))}
                 </div>
-              )}
+              </div>
             </div>
-
-            {/* CONTAINER 2: Ruangan Kelas Teori */}
-            <div className="border border-border bg-card p-4 sm:p-5 shadow-xs rounded-none space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-border">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 border border-primary/20 bg-primary/10 text-primary rounded-none">
-                    <Building2 className="size-4" />
+          ) : (
+            <div className={cn("grid grid-cols-1 xl:grid-cols-2 items-start", isFullscreen ? "gap-4 sm:gap-6 flex-1" : "gap-4 sm:gap-5")}>
+              {/* CONTAINER 1: Laboratorium Komputer */}
+              <div className={cn("border border-border shadow-xs rounded-none", isFullscreen ? "p-3.5 sm:p-5 space-y-3.5 sm:space-y-4 bg-card" : "p-3 sm:p-4 space-y-3 bg-muted/20 dark:bg-card/40")}>
+                <div className="flex items-center justify-between border-b border-border pb-2 sm:pb-2.5">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1 border border-primary/20 bg-primary/10 text-primary rounded-none">
+                      <Monitor className="size-3.5 sm:size-4" />
+                    </div>
+                    <h4 className={cn("font-heading font-bold text-foreground tracking-tight", isFullscreen ? "text-xs sm:text-sm md:text-base" : "text-xs sm:text-sm")}>
+                      Laboratorium Komputer
+                    </h4>
                   </div>
-                  <h4 className="font-heading font-bold text-sm sm:text-base text-foreground tracking-tight">
-                    Ruangan Kelas Teori
-                  </h4>
+                  <Badge variant="outline" className="text-[10px] sm:text-[11px] font-mono rounded-none border-border">
+                    {matrixRoomData.thehokLabs.length + matrixRoomData.kobarLabs.length} Labor
+                  </Badge>
                 </div>
-                <Badge variant="outline" className="text-[11px] font-mono rounded-none border-border">
-                  {matrixRoomData.thehokTheoryRooms.length + matrixRoomData.kobarTheoryRooms.length} Ruangan
-                </Badge>
+
+                {/* Subgroup Thehok */}
+                {(selectedKampus === "Semua" || selectedKampus === "Kampus Thehok") && matrixRoomData.thehokLabs.length > 0 && (
+                  <div className={cn(isFullscreen ? "space-y-2" : "space-y-1.5 sm:space-y-2")}>
+                    {selectedKampus === "Semua" && (
+                      <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+                        <span className="size-1.5 bg-primary rounded-full" />
+                        <span>Kampus Thehok</span>
+                      </div>
+                    )}
+                    <div className={cn("grid grid-cols-2 sm:grid-cols-4", isFullscreen ? "gap-2.5 sm:gap-3" : "gap-2 sm:gap-2.5")}>
+                      {matrixRoomData.thehokLabs.map((room) => renderRoomGridCard(room))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Subgroup Kobar */}
+                {(selectedKampus === "Semua" || selectedKampus === "Kampus Kobar") && matrixRoomData.kobarLabs.length > 0 && (
+                  <div className={cn(isFullscreen ? "space-y-2" : "space-y-1.5 sm:space-y-2", selectedKampus === "Semua" && "pt-2.5 border-t border-border/60")}>
+                    {selectedKampus === "Semua" && (
+                      <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+                        <span className="size-1.5 bg-primary rounded-full" />
+                        <span>Kampus Kobar</span>
+                      </div>
+                    )}
+                    <div className={cn("grid grid-cols-2 sm:grid-cols-4", isFullscreen ? "gap-2.5 sm:gap-3" : "gap-2 sm:gap-2.5")}>
+                      {matrixRoomData.kobarLabs.map((room) => renderRoomGridCard(room))}
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* Subgroup Thehok */}
-              {(selectedKampus === "Semua" || selectedKampus === "Kampus Thehok") && matrixRoomData.thehokTheoryRooms.length > 0 && (
-                <div className="space-y-2.5">
-                  <div className="flex items-center gap-2 text-xs font-mono font-semibold uppercase tracking-wider text-muted-foreground">
-                    <span className="size-1.5 bg-primary rounded-full" />
-                    <span>Kampus Thehok</span>
+              {/* CONTAINER 2: Ruangan Kelas Teori */}
+              <div className={cn("border border-border shadow-xs rounded-none", isFullscreen ? "p-3.5 sm:p-5 space-y-3.5 sm:space-y-4 bg-card" : "p-3 sm:p-4 space-y-3 bg-muted/20 dark:bg-card/40")}>
+                <div className="flex items-center justify-between border-b border-border pb-2 sm:pb-2.5">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1 border border-primary/20 bg-primary/10 text-primary rounded-none">
+                      <Building2 className="size-3.5 sm:size-4" />
+                    </div>
+                    <h4 className={cn("font-heading font-bold text-foreground tracking-tight", isFullscreen ? "text-xs sm:text-sm md:text-base" : "text-xs sm:text-sm")}>
+                      Ruangan Kelas Teori
+                    </h4>
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                    {matrixRoomData.thehokTheoryRooms.map((room) => renderRoomGridCard(room))}
-                  </div>
+                  <Badge variant="outline" className="text-[10px] sm:text-[11px] font-mono rounded-none border-border">
+                    {matrixRoomData.thehokTheoryRooms.length + matrixRoomData.kobarTheoryRooms.length} Ruangan
+                  </Badge>
                 </div>
-              )}
 
-              {/* Subgroup Kobar */}
-              {(selectedKampus === "Semua" || selectedKampus === "Kampus Kobar") && matrixRoomData.kobarTheoryRooms.length > 0 && (
-                <div className="space-y-2.5 pt-2 border-t border-border/60">
-                  <div className="flex items-center gap-2 text-xs font-mono font-semibold uppercase tracking-wider text-muted-foreground">
-                    <span className="size-1.5 bg-primary rounded-full" />
-                    <span>Kampus Kobar</span>
+                {/* Subgroup Thehok */}
+                {(selectedKampus === "Semua" || selectedKampus === "Kampus Thehok") && matrixRoomData.thehokTheoryRooms.length > 0 && (
+                  <div className={cn(isFullscreen ? "space-y-2" : "space-y-1.5 sm:space-y-2")}>
+                    {selectedKampus === "Semua" && (
+                      <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+                        <span className="size-1.5 bg-primary rounded-full" />
+                        <span>Kampus Thehok</span>
+                      </div>
+                    )}
+                    <div className={cn("grid grid-cols-2 sm:grid-cols-4", isFullscreen ? "gap-2.5 sm:gap-3" : "gap-2 sm:gap-2.5")}>
+                      {matrixRoomData.thehokTheoryRooms.map((room) => renderRoomGridCard(room))}
+                    </div>
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                    {matrixRoomData.kobarTheoryRooms.map((room) => renderRoomGridCard(room))}
+                )}
+
+                {/* Subgroup Kobar */}
+                {(selectedKampus === "Semua" || selectedKampus === "Kampus Kobar") && matrixRoomData.kobarTheoryRooms.length > 0 && (
+                  <div className={cn(isFullscreen ? "space-y-2" : "space-y-1.5 sm:space-y-2", selectedKampus === "Semua" && "pt-2.5 border-t border-border/60")}>
+                    {selectedKampus === "Semua" && (
+                      <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+                        <span className="size-1.5 bg-primary rounded-full" />
+                        <span>Kampus Kobar</span>
+                      </div>
+                    )}
+                    <div className={cn("grid grid-cols-2 sm:grid-cols-4", isFullscreen ? "gap-2.5 sm:gap-3" : "gap-2 sm:gap-2.5")}>
+                      {matrixRoomData.kobarTheoryRooms.map((room) => renderRoomGridCard(room))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 
@@ -1641,7 +1730,7 @@ export function AslabRoomMonitor({
 
               return (
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
                     <span>Daftar Sesi Perkuliahan</span>
                     <span className="font-mono text-primary font-bold">
                       {totalModalItems} Sesi Terjadwal

@@ -3,6 +3,7 @@
 import * as React from "react";
 import { CalendarCheck, CalendarX, Laptop, Users } from "lucide-react";
 import { cn } from "cn";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface StatsOverviewProps {
   totalJadwal: number;
@@ -75,7 +76,7 @@ export function StatsOverview({
   return (
     <div
       className={cn(
-        "grid grid-cols-2 border border-border bg-card shadow-2xs sm:grid-cols-4",
+        "grid grid-cols-2 border border-border bg-card shadow-2xs sm:grid-cols-4 print:border-none print:shadow-none print:bg-transparent print:grid-cols-4 print:gap-3",
         className
       )}
     >
@@ -84,26 +85,35 @@ export function StatsOverview({
         return (
           <div
             key={index}
-            className={`flex flex-col justify-center p-2.5 sm:px-3.5 sm:py-2.5 hover:bg-muted/30 transition-colors ${itemBorderClasses[index] || ""}`}
+            className={cn(
+              "flex flex-col justify-center p-2.5 sm:px-3.5 sm:py-2.5 hover:bg-muted/30 transition-colors print:border-none print:p-0",
+              itemBorderClasses[index]
+            )}
           >
             <div className="flex items-center justify-between gap-1.5 mb-1">
-              <span className={`text-xs font-bold tracking-tight truncate ${item.titleClass}`}>
+              <span className={cn("text-xs font-bold tracking-tight truncate print:text-[10px] print:text-neutral-700", item.titleClass)}>
                 {item.title}
               </span>
               <div
-                className={`flex size-6 shrink-0 items-center justify-center border ${item.iconClass}`}
+                className={cn("flex size-6 shrink-0 items-center justify-center border print:hidden", item.iconClass)}
               >
                 <Icon className="size-3.5" />
               </div>
             </div>
 
-            <div className="flex items-baseline gap-1">
-              <span className={`text-base sm:text-xl font-bold tracking-tight font-mono ${item.valueClass}`}>
-                {item.count}
-              </span>
-              <span className={`text-[11px] sm:text-xs font-semibold ${item.valueClass} opacity-80`}>
-                {item.suffix}
-              </span>
+            <div className="flex items-baseline gap-1 min-h-[28px] items-center">
+              {isLoading ? (
+                <Skeleton className="h-5 w-16 my-0.5" />
+              ) : (
+                <>
+                  <span className={cn("text-base sm:text-xl font-bold tracking-tight font-mono print:text-sm print:text-black", item.valueClass)}>
+                    {item.count}
+                  </span>
+                  <span className={cn("text-[11px] sm:text-xs font-semibold print:text-[10px] print:text-black opacity-80", item.valueClass)}>
+                    {item.suffix}
+                  </span>
+                </>
+              )}
             </div>
           </div>
         );

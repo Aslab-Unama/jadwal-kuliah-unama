@@ -1,176 +1,6 @@
-import { JadwalApiResponse, JadwalFilters, JadwalItem, JadwalSummaryData, JadwalSummaryFilters, JadwalSummaryResponse } from "./types";
-import { updateGlobalClockFromHeader } from "./time-sync";
+import { JadwalApiResponse, JadwalFilters, JadwalItem, JadwalSummaryFilters, JadwalSummaryResponse } from "./types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-
-const FALLBACK_SUMMARY: JadwalSummaryData = {
-  totalJadwal: 13906,
-  totalTatapMuka: 13893,
-  totalOnline: 0,
-  totalCancel: 13,
-  kampusList: ["Kampus Thehok", "Kampus Kobar"],
-  ruanganList: [
-    "Labor 1.3",
-    "Labor 1.4",
-    "Labor 1.5",
-    "Labor 1.6",
-    "Labor 1.7",
-    "Labor 1.8",
-    "Labor 1.9",
-    "Labor 2.7",
-    "Labor 3.2",
-    "Labor 4.1",
-    "Labor Cisco 4.3",
-    "Gedung Pasca, Lab. B2.3",
-  ],
-};
-
-const FALLBACK_ITEMS: JadwalItem[] = [
-  {
-    id: 1,
-    hari: "Senin",
-    tanggal: "13 April 2026",
-    waktuMulai: "08:00",
-    dosen: "Abdul Rahim, M.Kom",
-    kodeKelas: "01PS2",
-    mataKuliah: "Pemrograman Berorientasi Objek",
-    kampus: "Kampus Thehok",
-    ruangan: "Labor 1.5",
-    status: "OnSchedule (TM)",
-  },
-  {
-    id: 2,
-    hari: "Senin",
-    tanggal: "13 April 2026",
-    waktuMulai: "10:00",
-    dosen: "Dr. Hendrawan, S.Kom., M.S.I",
-    kodeKelas: "02SI3",
-    mataKuliah: "Basis Data Lanjut",
-    kampus: "Kampus Thehok",
-    ruangan: "Labor 2.7",
-    status: "OnSchedule (TM)",
-  },
-  {
-    id: 3,
-    hari: "Senin",
-    tanggal: "13 April 2026",
-    waktuMulai: "13:30",
-    dosen: "Novrianti, M.Kom",
-    kodeKelas: "03TI1",
-    mataKuliah: "Desain Antarmuka Pengguna (UI/UX)",
-    kampus: "Kampus Kobar",
-    ruangan: "Labor 1.8",
-    status: "OnSchedule (OL)",
-  },
-  {
-    id: 4,
-    hari: "Selasa",
-    tanggal: "14 April 2026",
-    waktuMulai: "08:00",
-    dosen: "Rian Fadhillah, M.Kom",
-    kodeKelas: "02TI4",
-    mataKuliah: "Jaringan Komputer & Komunikasi Data",
-    kampus: "Kampus Thehok",
-    ruangan: "Labor 1.4",
-    status: "OnSchedule (TM)",
-  },
-  {
-    id: 5,
-    hari: "Selasa",
-    tanggal: "14 April 2026",
-    waktuMulai: "10:30",
-    dosen: "Fitriani, M.Kom",
-    kodeKelas: "04SK1",
-    mataKuliah: "Sistem Tertanam & IoT",
-    kampus: "Kampus Kobar",
-    ruangan: "Labor 1.7",
-    status: "OnSchedule (TM)",
-  },
-  {
-    id: 6,
-    hari: "Rabu",
-    tanggal: "15 April 2026",
-    waktuMulai: "08:00",
-    dosen: "M. Subhan, S.Kom., M.Kom",
-    kodeKelas: "01TI2",
-    mataKuliah: "Struktur Data & Algoritma",
-    kampus: "Kampus Thehok",
-    ruangan: "Labor 1.3",
-    status: "OnSchedule (TM)",
-  },
-  {
-    id: 7,
-    hari: "Rabu",
-    tanggal: "15 April 2026",
-    waktuMulai: "13:00",
-    dosen: "Wulandari, M.Kom",
-    kodeKelas: "05SI2",
-    mataKuliah: "Kecerdasan Buatan (Artificial Intelligence)",
-    kampus: "Kampus Thehok",
-    ruangan: "Labor 3.2",
-    status: "Cancel",
-  },
-  {
-    id: 8,
-    hari: "Kamis",
-    tanggal: "16 April 2026",
-    waktuMulai: "08:00",
-    dosen: "Bambang Kurniawan, M.Kom",
-    kodeKelas: "03SI1",
-    mataKuliah: "Pemrograman Web Modern",
-    kampus: "Kampus Kobar",
-    ruangan: "Labor 1.3",
-    status: "OnSchedule (TM)",
-  },
-  {
-    id: 9,
-    hari: "Kamis",
-    tanggal: "16 April 2026",
-    waktuMulai: "10:00",
-    dosen: "Siti Rahmah, M.Kom",
-    kodeKelas: "02TI5",
-    mataKuliah: "Analisis & Perancangan Sistem",
-    kampus: "Kampus Thehok",
-    ruangan: "Labor 1.4",
-    status: "OnSchedule (OL)",
-  },
-  {
-    id: 10,
-    hari: "Jumat",
-    tanggal: "17 April 2026",
-    waktuMulai: "08:30",
-    dosen: "Ir. Dedi Prasetyo, M.T",
-    kodeKelas: "06SK2",
-    mataKuliah: "Keamanan Sistem Jaringan Komputer",
-    kampus: "Kampus Thehok",
-    ruangan: "Labor 3.2",
-    status: "OnSchedule (TM)",
-  },
-  {
-    id: 11,
-    hari: "Sabtu",
-    tanggal: "18 April 2026",
-    waktuMulai: "09:00",
-    dosen: "Herlina, M.S.I",
-    kodeKelas: "07TI8",
-    mataKuliah: "Praktikum Rekayasa Perangkat Lunak",
-    kampus: "Kampus Kobar",
-    ruangan: "Labor 1.9",
-    status: "OnSchedule (TM)",
-  },
-  {
-    id: 12,
-    hari: "Sabtu",
-    tanggal: "18 April 2026",
-    waktuMulai: "13:30",
-    dosen: "Agus Pratama, M.Kom",
-    kodeKelas: "04TI3",
-    mataKuliah: "Cloud Computing & DevOps",
-    kampus: "Kampus Thehok",
-    ruangan: "Labor 1.5",
-    status: "OnSchedule (OL)",
-  },
-];
 
 export async function fetchJadwalSummary(
   filterOrTanggal?: string | JadwalSummaryFilters
@@ -205,7 +35,6 @@ export async function fetchJadwalSummary(
       cache: "no-store",
     });
     clearTimeout(timeoutId);
-    updateGlobalClockFromHeader(response.headers.get("Date") || response.headers.get("date"));
 
     if (!response.ok) {
       throw new Error(`Gagal memuat ringkasan data (HTTP ${response.status})`);
@@ -213,57 +42,19 @@ export async function fetchJadwalSummary(
 
     const json = await response.json();
     return json;
-  } catch {
-    // Graceful fallback jika server API lokal belum berjalan
-    let filtered = [...FALLBACK_ITEMS];
-
-    if (filters.tanggal && filters.tanggal !== "Semua") {
-      filtered = filtered.filter((i) => i.tanggal === filters.tanggal);
-    }
-    if (filters.hari && filters.hari !== "Semua") {
-      filtered = filtered.filter((i) => i.hari?.toLowerCase() === filters.hari?.toLowerCase());
-    }
-    if (filters.kampus && filters.kampus !== "Semua") {
-      filtered = filtered.filter((i) => i.kampus === filters.kampus);
-    }
-    if (filters.ruangan && filters.ruangan !== "Semua") {
-      filtered = filtered.filter((i) => i.ruangan === filters.ruangan);
-    }
-    if (filters.search) {
-      const q = filters.search.toLowerCase();
-      filtered = filtered.filter(
-        (i) =>
-          (i.mataKuliah?.toLowerCase().includes(q) ?? false) ||
-          (i.dosen?.toLowerCase().includes(q) ?? false) ||
-          (i.kodeKelas?.toLowerCase().includes(q) ?? false) ||
-          (i.ruangan?.toLowerCase().includes(q) ?? false)
-      );
-    }
-
-    let totalTatapMuka = 0;
-    let totalOnline = 0;
-    let totalCancel = 0;
-
-    for (const item of filtered) {
-      const s = item.status?.toLowerCase() || "";
-      if (s.includes("tm") || s.includes("tatap muka")) {
-        totalTatapMuka++;
-      } else if (s.includes("ol") || s.includes("online")) {
-        totalOnline++;
-      } else if (s.includes("cancel") || s.includes("batal")) {
-        totalCancel++;
-      }
-    }
-
+  } catch (err) {
+    const errorMsg =
+      err instanceof Error ? err.message : "Gagal memuat ringkasan jadwal dari server.";
+    console.error("fetchJadwalSummary error:", errorMsg);
     return {
-      success: true,
+      success: false,
       data: {
-        totalJadwal: filtered.length,
-        totalTatapMuka,
-        totalOnline,
-        totalCancel,
-        kampusList: FALLBACK_SUMMARY.kampusList,
-        ruanganList: FALLBACK_SUMMARY.ruanganList,
+        totalJadwal: 0,
+        totalTatapMuka: 0,
+        totalOnline: 0,
+        totalCancel: 0,
+        kampusList: [],
+        ruanganList: [],
       },
     };
   }
@@ -276,7 +67,8 @@ export async function fetchJadwalList(filters: JadwalFilters): Promise<JadwalApi
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutMs = filters.all ? 45000 : 15000;
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     const params = new URLSearchParams();
     if (filters.all) {
@@ -315,10 +107,9 @@ export async function fetchJadwalList(filters: JadwalFilters): Promise<JadwalApi
       cache: "no-store",
     });
     clearTimeout(timeoutId);
-    updateGlobalClockFromHeader(response.headers.get("Date") || response.headers.get("date"));
 
     if (!response.ok) {
-      throw new Error(`Gagal memuat daftar jadwal (HTTP ${response.status})`);
+      throw new Error(`Gagal memuat daftar jadwal dari server (HTTP ${response.status})`);
     }
 
     const json: JadwalApiResponse = await response.json();
@@ -327,50 +118,13 @@ export async function fetchJadwalList(filters: JadwalFilters): Promise<JadwalApi
     }
     return json;
   } catch (err) {
-    console.warn("Menggunakan data fallback jadwal karena API tidak merespons:", err);
-    // Saring data fallback sesuai filter aktif saat server API offline
-    let filtered = FALLBACK_ITEMS.filter((i) => i.waktuMulai && i.waktuMulai >= "08:00");
-
-    if (filters.tanggal && filters.tanggal !== "Semua") {
-      filtered = filtered.filter((i) => i.tanggal === filters.tanggal);
-    }
-    if (filters.hari && filters.hari !== "Semua") {
-      filtered = filtered.filter((i) => i.hari?.toLowerCase() === filters.hari?.toLowerCase());
-    }
-    if (filters.kampus && filters.kampus !== "Semua") {
-      filtered = filtered.filter((i) => i.kampus === filters.kampus);
-    }
-    if (filters.ruangan && filters.ruangan !== "Semua") {
-      filtered = filtered.filter((i) => i.ruangan === filters.ruangan);
-    }
-    if (filters.status && filters.status !== "Semua") {
-      filtered = filtered.filter((i) => i.status === filters.status);
-    }
-    if (filters.search) {
-      const q = filters.search.toLowerCase();
-      filtered = filtered.filter(
-        (i) =>
-          (i.mataKuliah?.toLowerCase().includes(q) ?? false) ||
-          (i.dosen?.toLowerCase().includes(q) ?? false) ||
-          (i.kodeKelas?.toLowerCase().includes(q) ?? false) ||
-          (i.ruangan?.toLowerCase().includes(q) ?? false)
-      );
-    }
-
-    filtered.sort((a, b) => a.waktuMulai.localeCompare(b.waktuMulai));
-
-    const total = filtered.length;
-    const paginated = filters.all ? filtered : filtered.slice(offset, offset + limit);
-
+    const errorMsg =
+      err instanceof Error ? err.message : "Gagal terhubung ke server database jadwal.";
+    console.error("fetchJadwalList error:", errorMsg);
     return {
-      success: true,
-      pagination: {
-        total,
-        limit: filters.all ? total : limit,
-        offset: filters.all ? 0 : offset,
-        hasMore: filters.all ? false : offset + paginated.length < total,
-      },
-      data: paginated,
+      success: false,
+      data: [],
+      error: errorMsg,
     };
   }
 }

@@ -103,7 +103,7 @@ export function FilterBar({
   };
 
   return (
-    <div className={cn("space-y-3 border border-border bg-card p-3 sm:p-4 shadow-xs", className)}>
+    <div className={cn("space-y-3 border border-border bg-card p-3 sm:p-4 shadow-xs print:hidden", className)}>
       {/* Search Bar (Full width with responsive placeholder) */}
       <div className="relative w-full">
         <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
