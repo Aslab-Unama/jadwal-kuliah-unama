@@ -305,19 +305,19 @@ export function ScheduleGrid({
                   </div>
 
                   <div className="flex items-center gap-1.5 shrink-0">
-                    {/* Badge Cancel khusus jika kelas dibatalkan */}
-                    {item.status?.toLowerCase().includes("cancel") || item.status?.toLowerCase().includes("batal") ? (
-                      <Badge variant="destructive" className="text-[11px] px-2.5 py-0.5 h-auto font-bold">
-                        Cancel
-                      </Badge>
-                    ) : null}
-
                     {/* Kode Kelas di sisi kanan sejajar dengan jam */}
                     <div className="flex items-center font-mono text-[11px] font-bold px-2.5 py-0.5 bg-primary/10 text-primary border border-primary/30 dark:bg-primary/20 dark:border-primary/40">
                       <span className="tracking-wider">{item.kodeKelas}</span>
                     </div>
 
-                    <MethodBadge status={item.status} className="text-[11px] px-2 py-0.5 h-auto" />
+                    {/* Badge Kategori: Cancel / Tatap Muka / Online */}
+                    {item.status?.toLowerCase().includes("cancel") || item.status?.toLowerCase().includes("batal") ? (
+                      <Badge variant="destructive" className="text-[11px] px-2.5 py-0.5 h-auto font-bold rounded-none">
+                        Cancel
+                      </Badge>
+                    ) : (
+                      <MethodBadge status={item.status} className="text-[11px] px-2 py-0.5 h-auto" />
+                    )}
                   </div>
                 </div>
 
