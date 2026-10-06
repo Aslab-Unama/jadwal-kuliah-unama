@@ -28,7 +28,7 @@ import { cn } from "cn";
 import { LiveRunningClock } from "./aslab-room-monitor";
 import { useJadwalStore } from "@/stores/use-jadwal-store";
 import { isLabRoom } from "@/lib/lab-utils";
-import { isDateToday } from "@/lib/time-sync";
+import { isDateToday, isDateFuture } from "@/lib/time-sync";
 
 function getCookie(name: string): string | null {
   if (typeof document === "undefined") return null;
@@ -215,7 +215,7 @@ export function ScheduleDetailDialog({ item, onClose }: ScheduleDetailDialogProp
 
                 {/* Tombol Absen Lab khusus ketika dibuka dari Panel Monitoring Aslab dan merupakan ruangan Laboratorium */}
                 {isAslab && isFromAslabMonitor && isLabRoom(activeItem.ruangan) && (
-                  isDateToday(activeItem.tanggal) ? (
+                  !isDateFuture(activeItem.tanggal) ? (
                     <Button
                       type="button"
                       size="sm"
@@ -230,7 +230,7 @@ export function ScheduleDetailDialog({ item, onClose }: ScheduleDetailDialogProp
                       type="button"
                       size="sm"
                       disabled
-                      title="Absensi hanya tersedia untuk jadwal hari ini"
+                      title="Absensi tidak dapat dilakukan untuk jadwal di masa mendatang"
                       className="rounded-none bg-muted/70 text-muted-foreground border border-border gap-1.5 h-9 text-xs font-medium cursor-not-allowed opacity-75 select-none"
                     >
                       <Clock className="size-3.5 text-muted-foreground/80" />

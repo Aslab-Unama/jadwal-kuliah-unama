@@ -41,7 +41,7 @@ export interface JadwalStoreState {
   setViewMode: (mode: "grid" | "table") => void;
   openRoomModal: (room: RoomGridItem) => void;
   openDetailModal: (item: JadwalItem, fromAslabMonitor?: boolean, parentRoom?: RoomGridItem) => void;
-  openAttendanceModal: (item: JadwalItem, parentRoom?: RoomGridItem) => void;
+  openAttendanceModal: (item: JadwalItem, parentRoom?: RoomGridItem, returnToRoom?: boolean) => void;
   restoreModal: (modal: ActiveModal | null) => void;
   closeModal: (fromPopstate?: boolean) => void;
   setSelectedItem: (item: JadwalItem | null, fromAslabMonitor?: boolean) => void;
@@ -283,16 +283,22 @@ export const useJadwalStore = create<JadwalStoreState>((set, get) => {
     pushModalHistory(resolvedParent ? 2 : 1, modal);
   },
 
-  openAttendanceModal: (item: JadwalItem, parentRoom?: RoomGridItem) => {
+  openAttendanceModal: (item: JadwalItem, parentRoom?: RoomGridItem, returnToRoom?: boolean) => {
     const current = get().activeModal;
     const resolvedParent =
       parentRoom ||
-      (current?.type === "detail" ? current.parentRoom : undefined);
+      (current?.type === "detail" ? current.parentRoom : current?.type === "room" ? current.room : undefined);
+
+    const shouldReturnToRoom =
+      returnToRoom !== undefined
+        ? returnToRoom
+        : current?.type === "room";
 
     const modal: ActiveModal = {
       type: "attendance",
       item,
       parentRoom: resolvedParent,
+      returnToRoom: shouldReturnToRoom,
     };
 
     set({
@@ -343,16 +349,27 @@ export const useJadwalStore = create<JadwalStoreState>((set, get) => {
     }
 
     if (current.type === "attendance") {
-      set({
-        activeModal: {
-          type: "detail",
-          item: current.item,
-          fromAslabMonitor: true,
-          parentRoom: current.parentRoom,
-        },
-        selectedItem: current.item,
-        isFromAslabMonitor: true,
-      });
+      if (current.returnToRoom && current.parentRoom) {
+        set({
+          activeModal: {
+            type: "room",
+            room: current.parentRoom,
+          },
+          selectedItem: null,
+          isFromAslabMonitor: true,
+        });
+      } else {
+        set({
+          activeModal: {
+            type: "detail",
+            item: current.item,
+            fromAslabMonitor: true,
+            parentRoom: current.parentRoom,
+          },
+          selectedItem: current.item,
+          isFromAslabMonitor: true,
+        });
+      }
     } else if (current.type === "detail") {
       if (current.parentRoom) {
         set({

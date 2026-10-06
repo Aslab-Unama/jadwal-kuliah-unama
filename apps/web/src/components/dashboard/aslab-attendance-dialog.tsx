@@ -42,7 +42,7 @@ import {
 } from "lucide-react";
 import { cn } from "cn";
 import { useJadwalStore } from "@/stores/use-jadwal-store";
-import { isDateToday } from "@/lib/time-sync";
+import { isDateToday, isDateFuture } from "@/lib/time-sync";
 
 interface AslabAttendanceDialogProps {
   item?: JadwalItem | null;
@@ -228,10 +228,11 @@ export function AslabAttendanceDialog({
   };
 
   const isToday = isDateToday(effectiveItem.tanggal);
+  const isFuture = isDateFuture(effectiveItem.tanggal);
 
   const handleKirimAbsensi = async () => {
-    if (!isToday) {
-      setFeedbackMessage("Belum bisa absen. Absensi hanya dapat dilakukan untuk jadwal hari ini.");
+    if (isFuture) {
+      setFeedbackMessage("Belum bisa absen. Absensi tidak dapat dilakukan untuk jadwal di masa mendatang.");
       return;
     }
 
@@ -366,10 +367,10 @@ export function AslabAttendanceDialog({
               </div>
             )}
 
-            {!isToday && !feedbackMessage && (
+            {isFuture && !feedbackMessage && (
               <div className="p-2.5 bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 text-xs flex items-center gap-2">
                 <Clock className="size-4 shrink-0" />
-                <span>Absensi hanya dapat dilakukan untuk jadwal perkuliahan hari ini.</span>
+                <span>Absensi belum dapat dilakukan untuk jadwal perkuliahan di masa mendatang.</span>
               </div>
             )}
 
@@ -513,7 +514,7 @@ export function AslabAttendanceDialog({
 
             {/* Tombol Eksekusi Kirim Absen Otomatis (Primary) */}
             {!alreadySubmitted && !submitSuccess && (
-              isToday ? (
+              !isFuture ? (
                 <Button
                   type="button"
                   size="sm"
@@ -538,6 +539,7 @@ export function AslabAttendanceDialog({
                   type="button"
                   size="sm"
                   disabled
+                  title="Absensi tidak dapat dilakukan untuk jadwal di masa mendatang"
                   className="w-full sm:w-auto rounded-none bg-muted/70 text-muted-foreground border border-border gap-1.5 text-xs h-9 cursor-not-allowed opacity-75 select-none justify-center shrink-0"
                 >
                   <Clock className="size-3.5 text-muted-foreground/80" />

@@ -160,5 +160,5 @@ export interface RoomGridItem {
 export type ActiveModal =
   | { type: "room"; room: RoomGridItem }
   | { type: "detail"; item: JadwalItem; fromAslabMonitor?: boolean; parentRoom?: RoomGridItem }
-  | { type: "attendance"; item: JadwalItem; parentRoom?: RoomGridItem };
+  | { type: "attendance"; item: JadwalItem; parentRoom?: RoomGridItem; returnToRoom?: boolean };
 

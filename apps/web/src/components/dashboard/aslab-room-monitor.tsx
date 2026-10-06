@@ -285,6 +285,7 @@ export function AslabRoomMonitor({
   const activeModal = useJadwalStore((s) => s.activeModal);
   const openRoomModal = useJadwalStore((s) => s.openRoomModal);
   const openDetailModal = useJadwalStore((s) => s.openDetailModal);
+  const openAttendanceModal = useJadwalStore((s) => s.openAttendanceModal);
   const closeModal = useJadwalStore((s) => s.closeModal);
 
   const isRoomModalOpen = activeModal?.type === "room";
@@ -1763,7 +1764,9 @@ export function AslabRoomMonitor({
                       const realtime = getRealtimeScheduleStatus(cls, currentMins);
 
                       let cardStyle = "border border-border bg-card hover:border-primary/60 hover:bg-muted/30";
-                      if (realtime.isLive) {
+                      if (realtime.isCancelled) {
+                        cardStyle = "border border-destructive/30 bg-destructive/5 opacity-80 hover:opacity-100";
+                      } else if (realtime.isLive) {
                         cardStyle = "border-2 border-emerald-500 bg-emerald-500/5 dark:bg-emerald-950/20 ring-1 ring-emerald-500/40 shadow-xs";
                       } else if (realtime.isUpcoming) {
                         cardStyle = "border-2 border-blue-500/80 bg-blue-500/5 dark:bg-blue-950/20 ring-1 ring-blue-500/40 shadow-xs";
@@ -1859,11 +1862,6 @@ export function AslabRoomMonitor({
                                     Selesai
                                   </span>
                                 )}
-                                {realtime.isCancelled && (
-                                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-destructive text-white font-mono text-[10px] sm:text-xs font-bold uppercase rounded-none">
-                                    Cancel
-                                  </span>
-                                )}
                                 {realtime.isUpcoming && (
                                   <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-blue-600 text-white font-mono text-[10px] sm:text-xs font-bold uppercase rounded-none">
                                     {isFirstClassOfDay ? "Terjadwal" : "Terjadwal Berikutnya"}
@@ -1872,7 +1870,38 @@ export function AslabRoomMonitor({
                               </div>
 
                               <div className="flex items-center gap-2">
-                                <MethodBadge status={cls.status} className="text-xs px-2.5 py-1 h-auto rounded-none" />
+                                {realtime.isCancelled ? (
+                                  <Badge variant="destructive" className="text-xs px-2.5 py-1 h-auto rounded-none font-bold">
+                                    Cancel
+                                  </Badge>
+                                ) : (
+                                  <MethodBadge status={cls.status} className="text-xs px-2.5 py-1 h-auto rounded-none" />
+                                )}
+                                {selectedRoomForModal?.isLabor && (
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    disabled={isDateFuture(cls.tanggal)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openAttendanceModal(cls, selectedRoomForModal, true);
+                                    }}
+                                    className={cn(
+                                      "h-6 sm:h-7 px-2 text-[11px] font-semibold rounded-none gap-1 shadow-2xs font-mono select-none",
+                                      isDateFuture(cls.tanggal)
+                                        ? "bg-muted/70 text-muted-foreground border border-border cursor-not-allowed opacity-75"
+                                        : "bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer"
+                                    )}
+                                    title={
+                                      isDateFuture(cls.tanggal)
+                                        ? "Absensi tidak dapat dilakukan untuk jadwal di masa mendatang"
+                                        : `Buka form absen untuk ${cls.mataKuliah} (${cls.kodeKelas})`
+                                    }
+                                  >
+                                    <CheckCircle2 className="size-3 shrink-0" />
+                                    <span>Absen</span>
+                                  </Button>
+                                )}
                               </div>
                             </div>
 
