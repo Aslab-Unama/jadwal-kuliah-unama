@@ -1,5 +1,5 @@
 import { JadwalItem } from "./types";
-import { isLabRoom, timeToMinutes } from "./lab-utils";
+import { isLabRoom, timeToMinutes, isOnlineClass, isCancelledClass } from "./lab-utils";
 import { isDateFuture, parseDateFromDbString, getTodayDbFormat, getTodayWib } from "./time-sync";
 
 export type AnalyticsPeriodScope = "realisasi" | "proyeksi_semester";
@@ -204,9 +204,8 @@ export function computeAcademicAnalytics(
     }
 
     // Status method
-    const statusLower = (item.status || "").toLowerCase();
-    const isOnline = statusLower.includes("online") || statusLower.includes("daring");
-    const isCancel = statusLower.includes("batal") || statusLower.includes("cancel");
+    const isOnline = isOnlineClass(item.status, item.ruangan);
+    const isCancel = isCancelledClass(item.status);
     const isTM = !isOnline && !isCancel;
 
     if (isOnline) allOL++;
@@ -263,7 +262,7 @@ export function computeAcademicAnalytics(
       dStat.totalJam += duration;
       if (item.mataKuliah) dStat.mataKuliahSet.add(item.mataKuliah.trim());
       if (isOnline) dStat.online += 1;
-      else dStat.tatapMuka += 1;
+      else if (!isCancel) dStat.tatapMuka += 1;
     }
 
     // Day aggregation
