@@ -1,6 +1,6 @@
 import { Elysia, t } from 'elysia';
 import { cors } from '@elysiajs/cors';
-import { db, jadwalLab, logNotifikasiPerubahan, asistenLab, absensiAslab, eq, ilike, and, or, desc, asc, sql } from '@jadwal/db';
+import { db, jadwalLab, mataKuliah, logNotifikasiPerubahan, asistenLab, absensiAslab, eq, ilike, and, or, desc, asc, sql } from '@jadwal/db';
 import { httpLogger, log } from './logger';
 import { getCachedAllJadwal, setCachedAllJadwal, invalidateAllJadwalCache } from './redis';
 import { InMemoryRateLimiter } from './rate-limiter';
@@ -431,30 +431,66 @@ export const app = new Elysia()
       .get(
         '/jadwal/validate-class/:code',
         async ({ params: { code }, set }) => {
-          const normalized = code.trim().toUpperCase();
-          const [found] = await db
+          const raw = code.trim().toUpperCase();
+          const [classPart, courseCodePart] = raw.split(':');
+          const normalizedClass = classPart.trim();
+          const normalizedCourse = courseCodePart ? courseCodePart.trim() : null;
+
+          // 1. Validasi keberadaan kelas
+          const [foundClass] = await db
             .select({
               kodeKelas: jadwalLab.kodeKelas,
               mataKuliah: jadwalLab.mataKuliah,
               dosen: jadwalLab.dosen,
             })
             .from(jadwalLab)
-            .where(ilike(jadwalLab.kodeKelas, normalized))
+            .where(ilike(jadwalLab.kodeKelas, normalizedClass))
             .limit(1);
 
-          if (!found) {
+          if (!foundClass) {
             set.status = 404;
             return {
               success: false,
               valid: false,
-              message: `Kelas "${normalized}" tidak ditemukan di database jadwal`,
+              message: `Kelas "${normalizedClass}" tidak ditemukan di database jadwal`,
+            };
+          }
+
+          // 2. Jika menyertakan kode mata kuliah, validasi kode MK tersebut
+          if (normalizedCourse) {
+            const [foundMk] = await db
+              .select({
+                kodeMk: mataKuliah.kodeMk,
+                mataKuliah: mataKuliah.mataKuliah,
+              })
+              .from(mataKuliah)
+              .where(ilike(mataKuliah.kodeMk, normalizedCourse))
+              .limit(1);
+
+            if (!foundMk) {
+              set.status = 404;
+              return {
+                success: false,
+                valid: false,
+                message: `Kode mata kuliah "${normalizedCourse}" tidak ditemukan di database`,
+              };
+            }
+
+            return {
+              success: true,
+              valid: true,
+              data: {
+                kodeKelas: normalizedClass,
+                kodeMk: foundMk.kodeMk,
+                mataKuliah: foundMk.mataKuliah,
+              },
             };
           }
 
           return {
             success: true,
             valid: true,
-            data: found,
+            data: foundClass,
           };
         },
         {
