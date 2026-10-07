@@ -682,7 +682,7 @@ export const app = new Elysia()
                 namaAsisten,
               } = body;
 
-              // 1. Validasi hari ini (hanya jadwal hari ini yang boleh diabsen)
+              // 1. Validasi tanggal: absensi diizinkan untuk hari ini dan hari-hari sebelumnya (masa lalu), TIDAK diizinkan untuk masa mendatang
               const todayWibStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' }); // YYYY-MM-DD
               let parsedTanggalIso = body.tanggalIso;
               if (!parsedTanggalIso) {
@@ -700,11 +700,11 @@ export const app = new Elysia()
                 }
               }
 
-              if (parsedTanggalIso && parsedTanggalIso !== todayWibStr) {
+              if (parsedTanggalIso && parsedTanggalIso > todayWibStr) {
                 set.status = 400;
                 return {
                   success: false,
-                  message: 'Belum bisa absen. Absensi hanya dapat dilakukan untuk perkuliahan hari ini.',
+                  message: 'Belum bisa absen. Absensi tidak dapat dilakukan untuk perkuliahan di masa mendatang.',
                 };
               }
 
