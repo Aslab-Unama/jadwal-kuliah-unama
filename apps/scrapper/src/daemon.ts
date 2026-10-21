@@ -26,8 +26,7 @@ function getWibTime(): { dateStr: string; hour: number; minute: number; fullDisp
 }
 
 function log(msg: string) {
-  const { fullDisplay } = getWibTime();
-  console.log(`[${fullDisplay}] ${msg}`);
+  console.log(msg);
 }
 
 async function startDaemon() {
