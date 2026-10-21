@@ -163,6 +163,8 @@ export default function HomePage() {
           onFilterChange={setFilters}
           kampusList={summary.kampusList}
           ruanganList={summary.ruanganList}
+          kelasList={summary.kelasList}
+          dosenList={summary.dosenList}
           summary={summary}
           viewMode={viewMode}
           onViewModeChange={setViewMode}

@@ -22,6 +22,8 @@ export interface FilterBarProps {
   onResetFilters: () => void;
   kampusList: string[];
   ruanganList: string[];
+  kelasList?: string[];
+  dosenList?: string[];
   viewMode: "grid" | "table";
   onViewModeChange: (mode: "grid" | "table") => void;
   totalFiltered: number;
@@ -43,6 +45,8 @@ export function FilterBar({
   onResetFilters,
   kampusList,
   ruanganList,
+  kelasList = [],
+  dosenList = [],
   viewMode,
   onViewModeChange,
   totalFiltered,
@@ -80,6 +84,8 @@ export function FilterBar({
       filters.tanggal ||
       (filters.kampus && filters.kampus !== "Semua") ||
       (filters.ruangan && filters.ruangan !== "Semua") ||
+      (filters.kelas && filters.kelas !== "Semua") ||
+      (filters.dosen && filters.dosen !== "Semua") ||
       (filters.status && filters.status !== "Semua")
   );
 
@@ -173,8 +179,8 @@ export function FilterBar({
         </div>
       </div>
 
-      {/* Dropdown Filters (Kampus, Ruangan, Status) */}
-      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3 pt-1 border-t border-border/50">
+      {/* Dropdown Filters (Kampus, Ruangan, Kelas, Dosen, Status) */}
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 pt-1 border-t border-border/50">
         <div>
           <label htmlFor="filter-kampus" className="block text-[11px] font-medium text-muted-foreground mb-1">
             Kampus
@@ -208,6 +214,44 @@ export function FilterBar({
             {ruanganList.map((r) => (
               <NativeSelectOption key={r} value={r}>
                 {r}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
+        </div>
+
+        <div>
+          <label htmlFor="filter-kelas" className="block text-[11px] font-medium text-muted-foreground mb-1">
+            Kelas
+          </label>
+          <NativeSelect
+            id="filter-kelas"
+            value={filters.kelas || "Semua"}
+            onChange={(e) => onFilterChange({ kelas: e.target.value, page: 1 })}
+            className="w-full"
+          >
+            <NativeSelectOption value="Semua">Semua Kelas</NativeSelectOption>
+            {kelasList.map((k) => (
+              <NativeSelectOption key={k} value={k}>
+                {k}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
+        </div>
+
+        <div>
+          <label htmlFor="filter-dosen" className="block text-[11px] font-medium text-muted-foreground mb-1">
+            Dosen
+          </label>
+          <NativeSelect
+            id="filter-dosen"
+            value={filters.dosen || "Semua"}
+            onChange={(e) => onFilterChange({ dosen: e.target.value, page: 1 })}
+            className="w-full"
+          >
+            <NativeSelectOption value="Semua">Semua Dosen</NativeSelectOption>
+            {dosenList.map((d) => (
+              <NativeSelectOption key={d} value={d}>
+                {d}
               </NativeSelectOption>
             ))}
           </NativeSelect>

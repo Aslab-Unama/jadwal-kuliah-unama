@@ -40,6 +40,8 @@ export interface JadwalSummaryData {
   kampusList: string[];
   ruanganList: string[];
   ruangLaborList?: string[];
+  kelasList?: string[];
+  dosenList?: string[];
 }
 
 export interface JadwalSummaryResponse {
@@ -53,6 +55,8 @@ export interface JadwalSummaryFilters {
   tanggal?: string;
   kampus?: string;
   ruangan?: string;
+  kelas?: string;
+  dosen?: string;
 }
 
 export interface JadwalFilters {
@@ -64,6 +68,8 @@ export interface JadwalFilters {
   kampus?: string;
   ruangan?: string;
   status?: string;
+  kelas?: string;
+  dosen?: string;
   page?: number;
   limit?: number;
 }

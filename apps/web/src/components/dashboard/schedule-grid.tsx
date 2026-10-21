@@ -62,6 +62,8 @@ export interface ScheduleGridProps {
   onFilterChange?: (newFilters: Partial<JadwalFilters>) => void;
   kampusList?: string[];
   ruanganList?: string[];
+  kelasList?: string[];
+  dosenList?: string[];
   viewMode?: "grid" | "table";
   onViewModeChange?: (mode: "grid" | "table") => void;
   totalFiltered?: number;
@@ -86,6 +88,8 @@ export function ScheduleGrid({
   onFilterChange,
   kampusList,
   ruanganList,
+  kelasList,
+  dosenList,
   viewMode = "grid",
   onViewModeChange,
   totalFiltered,
@@ -112,6 +116,8 @@ export function ScheduleGrid({
       onResetFilters={onResetFilters}
       kampusList={kampusList}
       ruanganList={ruanganList}
+      kelasList={kelasList || summary?.kelasList || []}
+      dosenList={dosenList || summary?.dosenList || []}
       viewMode={viewMode}
       onViewModeChange={onViewModeChange}
       totalFiltered={totalFiltered}

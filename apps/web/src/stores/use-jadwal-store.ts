@@ -7,6 +7,7 @@ import {
   JadwalSummaryData,
   RoomGridItem,
   formatDateDb,
+  formatDosenName,
   getTodayWib,
 } from "@/lib/types";
 import { clearRedisCache, fetchJadwalList } from "@/lib/api";
@@ -64,6 +65,8 @@ const DEFAULT_FILTERS: JadwalFilters = {
   kampus: "Semua",
   ruangan: "Semua",
   status: "Semua",
+  kelas: "Semua",
+  dosen: "Semua",
   page: 1,
   limit: DEFAULT_LIMIT,
 };
@@ -216,6 +219,8 @@ export const useJadwalStore = create<JadwalStoreState>((set, get) => {
         newFilters.kampus !== undefined ||
         newFilters.ruangan !== undefined ||
         newFilters.status !== undefined ||
+        newFilters.kelas !== undefined ||
+        newFilters.dosen !== undefined ||
         newFilters.hari !== undefined ||
         newFilters.tanggal !== undefined;
 
@@ -468,6 +473,17 @@ export const useJadwalStore = create<JadwalStoreState>((set, get) => {
       filtered = filtered.filter((i) => i.ruangan === filters.ruangan);
     }
 
+    // Filter Kelas
+    if (filters.kelas && filters.kelas !== "Semua") {
+      filtered = filtered.filter((i) => i.kodeKelas === filters.kelas);
+    }
+
+    // Filter Dosen
+    if (filters.dosen && filters.dosen !== "Semua") {
+      const dLower = filters.dosen.toLowerCase();
+      filtered = filtered.filter((i) => (i.dosen?.toLowerCase().includes(dLower) ?? false));
+    }
+
     // Filter Status
     if (filters.status && filters.status !== "Semua") {
       filtered = filtered.filter((i) => i.status === filters.status);
@@ -523,17 +539,31 @@ export const useJadwalStore = create<JadwalStoreState>((set, get) => {
     const { allSchedules, getCurrentDateRawItems, filters } = get();
     const dateItems = getCurrentDateRawItems();
 
-    // Daftar kampus & ruangan diambil dari seluruh database agar dropdown filter selalu lengkap
+    // Daftar kampus, ruangan, kelas, dan dosen diambil dari seluruh database agar dropdown filter selalu lengkap
     const campusSet = new Set<string>();
     const roomSet = new Set<string>();
+    const kelasSet = new Set<string>();
+    const dosenSet = new Set<string>();
 
     for (const item of allSchedules) {
       if (item.kampus) campusSet.add(item.kampus);
       if (item.ruangan) roomSet.add(item.ruangan);
+      if (item.kodeKelas) {
+        const k = item.kodeKelas.trim();
+        if (k && k !== "-") kelasSet.add(k);
+      }
+      if (item.dosen) {
+        const formatted = formatDosenName(item.dosen);
+        const parts = formatted.split(" / ");
+        for (const p of parts) {
+          const d = p.trim();
+          if (d && d !== "-") dosenSet.add(d);
+        }
+      }
     }
 
     // Hitung ringkasan statistik (Tatap Muka, Online, Cancel) untuk data tanggal aktif
-    // (dengan filter kampus, ruangan, & search query diterapkan, kecuali filter status)
+    // (dengan filter kampus, ruangan, kelas, dosen, & search query diterapkan, kecuali filter status)
     let summaryItems = dateItems;
 
     if (filters.kampus && filters.kampus !== "Semua") {
@@ -541,6 +571,13 @@ export const useJadwalStore = create<JadwalStoreState>((set, get) => {
     }
     if (filters.ruangan && filters.ruangan !== "Semua") {
       summaryItems = summaryItems.filter((i) => i.ruangan === filters.ruangan);
+    }
+    if (filters.kelas && filters.kelas !== "Semua") {
+      summaryItems = summaryItems.filter((i) => i.kodeKelas === filters.kelas);
+    }
+    if (filters.dosen && filters.dosen !== "Semua") {
+      const dLower = filters.dosen.toLowerCase();
+      summaryItems = summaryItems.filter((i) => (i.dosen?.toLowerCase().includes(dLower) ?? false));
     }
     if (filters.search && filters.search.trim() !== "") {
       const q = filters.search.trim().toLowerCase();
@@ -578,6 +615,16 @@ export const useJadwalStore = create<JadwalStoreState>((set, get) => {
         ? Array.from(roomSet).sort()
         : [];
 
+    const kelasList =
+      kelasSet.size > 0
+        ? Array.from(kelasSet).sort((a, b) => a.localeCompare(b, "id", { numeric: true }))
+        : [];
+
+    const dosenList =
+      dosenSet.size > 0
+        ? Array.from(dosenSet).sort((a, b) => a.localeCompare(b, "id"))
+        : [];
+
     return {
       totalJadwal: summaryItems.length,
       totalTatapMuka,
@@ -585,6 +632,8 @@ export const useJadwalStore = create<JadwalStoreState>((set, get) => {
       totalCancel,
       kampusList,
       ruanganList,
+      kelasList,
+      dosenList,
     };
   },
 };

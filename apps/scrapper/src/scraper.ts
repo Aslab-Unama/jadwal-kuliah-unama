@@ -55,7 +55,22 @@ export async function scrapeLabSchedulePage(
       });
 
       if (res.ok) break;
-      throw new Error(`HTTP ${res.status} ${res.statusText}`);
+
+      const headersObj = Object.fromEntries(res.headers.entries());
+      let bodySnippet = '';
+      try {
+        const text = await res.text();
+        bodySnippet = text.slice(0, 1500);
+      } catch {}
+
+      console.error(`\n=================== BAAK FETCH ERROR (Attempt ${attempt}/3) ===================`);
+      console.error(`URL: ${url}`);
+      console.error(`Status: ${res.status} ${res.statusText}`);
+      console.error(`Headers:`, JSON.stringify(headersObj, null, 2));
+      console.error(`Body Snippet:\n${bodySnippet}`);
+      console.error(`===============================================================================\n`);
+
+      throw new Error(`HTTP ${res.status} ${res.statusText} (Server: ${headersObj.server || 'unknown'})`);
     } catch (err: any) {
       lastError = err;
       if (attempt < 3) {

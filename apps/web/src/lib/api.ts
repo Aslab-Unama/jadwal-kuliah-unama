@@ -28,6 +28,12 @@ export async function fetchJadwalSummary(
     if (filters.hari && filters.hari !== "Semua") {
       url.searchParams.set("hari", filters.hari);
     }
+    if (filters.kelas && filters.kelas !== "Semua") {
+      url.searchParams.set("kodeKelas", filters.kelas);
+    }
+    if (filters.dosen && filters.dosen !== "Semua") {
+      url.searchParams.set("dosen", filters.dosen);
+    }
 
     const response = await fetch(url.toString(), {
       signal: controller.signal,
@@ -93,6 +99,12 @@ export async function fetchJadwalList(filters: JadwalFilters): Promise<JadwalApi
     }
     if (filters.status && filters.status !== "Semua") {
       params.set("status", filters.status);
+    }
+    if (filters.kelas && filters.kelas !== "Semua") {
+      params.set("kodeKelas", filters.kelas);
+    }
+    if (filters.dosen && filters.dosen !== "Semua") {
+      params.set("dosen", filters.dosen);
     }
     if (filters.search) {
       params.set("search", filters.search.trim());
