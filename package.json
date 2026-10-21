@@ -16,6 +16,7 @@
     "scrape:sync": "bun run --cwd apps/scrapper sync",
     "scrape:today": "bun run --cwd apps/scrapper sync:today",
     "scrape:fresh": "bun run --cwd apps/scrapper sync:fresh",
+    "scrape:daemon": "bun run --cwd apps/scrapper daemon",
     "db:push": "bun run --cwd packages/db db:push",
     "db:studio": "bun run --cwd packages/db db:studio",
     "tsc": "bun --cwd apps/web tsc --noEmit",

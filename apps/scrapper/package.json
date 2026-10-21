@@ -8,7 +8,8 @@
     "sync": "bun run src/index.ts --sync",
     "sync:today": "bun run src/index.ts --sync --today",
     "sync:fresh": "bun run src/index.ts --sync --clean",
-    "sync:status": "bun run src/index.ts --status"
+    "sync:status": "bun run src/index.ts --status",
+    "daemon": "bun run src/daemon.ts"
   },
   "dependencies": {
     "@jadwal/db": "workspace:*",

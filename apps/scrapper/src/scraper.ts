@@ -1,6 +1,8 @@
 import * as cheerio from 'cheerio';
 import type { ScrapedScheduleItem, ScrapePageResult } from './types';
 
+declare const Bun: any;
+
 const BASE_URL = process.env.BAAK_URL || 'https://baak.unama.ac.id/jadwal-kuliah';
 
 export interface ImpersonateFetchResponse {
