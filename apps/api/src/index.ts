@@ -5,7 +5,7 @@ import { httpLogger, log } from './logger';
 import { getCachedAllJadwal, setCachedAllJadwal, invalidateAllJadwalCache } from './redis';
 import { InMemoryRateLimiter } from './rate-limiter';
 import { triggerSyncToday, triggerSyncFull, triggerStatusChangeSync, getCronStatus, startCronScheduler } from './cron';
-import { getTodayDateWIB } from '@jadwal/scrapper';
+import { getTodayDateWIB, fetchHtmlWithChromeImpersonate, getImpersonateBinary } from '@jadwal/scrapper';
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
 const HOST = process.env.HOST || '0.0.0.0';
@@ -933,20 +933,16 @@ export const app = new Elysia()
         const today = getTodayDateWIB();
         const targetUrl = `${process.env.BAAK_URL || 'https://baak.unama.ac.id/jadwal-kuliah'}?search=1&tanggal=${today}&page=1`;
         try {
-          const res = await fetch(targetUrl, {
-            headers: {
-              'User-Agent':
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-              Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            },
-          });
+          const res = await fetchHtmlWithChromeImpersonate(targetUrl);
           const text = await res.text();
           return {
             success: res.ok,
             status: res.status,
             statusText: res.statusText,
             targetUrl,
-            headers: Object.fromEntries(res.headers.entries()),
+            engine: res.engine,
+            detectedBinary: getImpersonateBinary(),
+            headers: res.headers,
             bodyLength: text.length,
             bodyPreview: text.slice(0, 2000),
           };
@@ -954,6 +950,7 @@ export const app = new Elysia()
           return {
             success: false,
             targetUrl,
+            detectedBinary: getImpersonateBinary(),
             error: err?.message || String(err),
           };
         }

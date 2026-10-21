@@ -3,6 +3,96 @@ import type { ScrapedScheduleItem, ScrapePageResult } from './types';
 
 const BASE_URL = process.env.BAAK_URL || 'https://baak.unama.ac.id/jadwal-kuliah';
 
+export interface ImpersonateFetchResponse {
+  ok: boolean;
+  status: number;
+  statusText: string;
+  text: () => Promise<string>;
+  headers: Record<string, string>;
+  engine: 'curl-impersonate' | 'fetch';
+}
+
+export function getImpersonateBinary(): string | null {
+  const candidates = [
+    '/usr/local/bin/curl_chrome120',
+    '/usr/local/bin/curl_chrome124',
+    '/usr/local/bin/curl_chrome116',
+    '/usr/local/bin/curl_chrome',
+    '/usr/local/bin/curl-impersonate-chrome',
+    'curl_chrome120',
+    'curl_chrome124',
+    'curl_chrome116',
+    'curl_chrome',
+    'curl-impersonate-chrome',
+  ];
+  for (const bin of candidates) {
+    if (Bun.which(bin)) {
+      return bin;
+    }
+  }
+  return null;
+}
+
+export async function fetchHtmlWithChromeImpersonate(url: string): Promise<ImpersonateFetchResponse> {
+  const bin = getImpersonateBinary();
+
+  if (bin) {
+    try {
+      const proc = Bun.spawn([
+        bin,
+        '-sSL',
+        '-w',
+        '\n__HTTP_STATUS__:%{http_code}',
+        url,
+      ], {
+        stdout: 'pipe',
+        stderr: 'pipe',
+      });
+
+      const stdout = await new Response(proc.stdout).text();
+      const marker = '\n__HTTP_STATUS__:';
+      const markerIdx = stdout.lastIndexOf(marker);
+
+      if (markerIdx !== -1) {
+        const statusCode = parseInt(stdout.substring(markerIdx + marker.length).trim(), 10) || 200;
+        const body = stdout.substring(0, markerIdx);
+        return {
+          ok: statusCode >= 200 && statusCode < 300,
+          status: statusCode,
+          statusText: statusCode === 200 ? 'OK' : `Status ${statusCode}`,
+          text: async () => body,
+          headers: {
+            'x-fetch-engine': 'curl-impersonate',
+            'x-binary': bin,
+          },
+          engine: 'curl-impersonate',
+        };
+      }
+    } catch (e: any) {
+      console.warn(`[Scraper] Gagal menggunakan curl-impersonate (${e?.message}), beralih ke fetch standar...`);
+    }
+  }
+
+  // Fallback ke fetch bawaan Bun
+  const res = await fetch(url, {
+    headers: {
+      'User-Agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+      Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7',
+    },
+  });
+
+  return {
+    ok: res.ok,
+    status: res.status,
+    statusText: res.statusText,
+    text: () => res.text(),
+    headers: Object.fromEntries(res.headers.entries()),
+    engine: 'fetch',
+  };
+}
+
 /**
  * Mendapatkan tanggal hari ini dalam format YYYY-MM-DD sesuai zona waktu WIB (Asia/Jakarta)
  */
@@ -41,36 +131,30 @@ export async function scrapeLabSchedulePage(
   targetUrl.searchParams.set('page', page.toString());
   const url = targetUrl.toString();
 
-  let res: Response | null = null;
+  let res: ImpersonateFetchResponse | null = null;
   let lastError: any = null;
 
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      res = await fetch(url, {
-        headers: {
-          'User-Agent':
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-          Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        },
-      });
+      res = await fetchHtmlWithChromeImpersonate(url);
 
       if (res.ok) break;
 
-      const headersObj = Object.fromEntries(res.headers.entries());
+      const headersObj = res.headers;
       let bodySnippet = '';
       try {
         const text = await res.text();
         bodySnippet = text.slice(0, 1500);
       } catch {}
 
-      console.error(`\n=================== BAAK FETCH ERROR (Attempt ${attempt}/3) ===================`);
+      console.error(`\n=================== BAAK FETCH ERROR (Attempt ${attempt}/3) [Engine: ${res.engine}] ===================`);
       console.error(`URL: ${url}`);
       console.error(`Status: ${res.status} ${res.statusText}`);
       console.error(`Headers:`, JSON.stringify(headersObj, null, 2));
       console.error(`Body Snippet:\n${bodySnippet}`);
-      console.error(`===============================================================================\n`);
+      console.error(`=========================================================================================\n`);
 
-      throw new Error(`HTTP ${res.status} ${res.statusText} (Server: ${headersObj.server || 'unknown'})`);
+      throw new Error(`HTTP ${res.status} ${res.statusText} (Engine: ${res.engine})`);
     } catch (err: any) {
       lastError = err;
       if (attempt < 3) {

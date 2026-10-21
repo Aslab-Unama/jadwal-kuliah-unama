@@ -1,4 +1,4 @@
-import { scrapeLabSchedulePage, getTodayDateWIB } from './scraper';
+import { scrapeLabSchedulePage, getTodayDateWIB, fetchHtmlWithChromeImpersonate, getImpersonateBinary } from './scraper';
 import { syncScheduleToDatabase, syncStatusChangesToDatabase } from './sync';
 import {
   runScrapeSync,
@@ -14,6 +14,8 @@ export {
   runStatusChangeSync,
   clearRedisCache,
   scrapeLabSchedulePage,
+  fetchHtmlWithChromeImpersonate,
+  getImpersonateBinary,
   syncScheduleToDatabase,
   syncStatusChangesToDatabase,
   getTodayDateWIB,
