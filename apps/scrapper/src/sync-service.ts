@@ -27,27 +27,43 @@ export async function clearRedisCache(logFn: (msg: string) => void = console.log
   const token = process.env.UPSTASH_REDIS_REST_TOKEN;
 
   if (url && token) {
-    try {
-      const endpoint = `${url.replace(/\/$/, '')}/del/jadwal:all_2026_ganjil`;
-      const res = await fetch(endpoint, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (res.ok) {
-        logFn('⚡ Upstash Redis cache (jadwal:all_2026_ganjil) berhasil dibersihkan via REST API!');
+    const baseUrl = url.replace(/\/$/, '');
+    const keysToDelete = ['jadwal:all_2026_ganjil_v2', 'jadwal:all_2026_ganjil'];
+
+    for (const key of keysToDelete) {
+      try {
+        const endpoint = `${baseUrl}/del/${key}`;
+        const res = await fetch(endpoint, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (res.ok) {
+          logFn(`⚡ Upstash Redis cache (${key}) berhasil dibersihkan via REST API!`);
+        }
+      } catch (e: any) {
+        console.warn(`⚠️ Gagal membersihkan Upstash Redis (${key}) via REST API:`, e?.message);
       }
-    } catch (e: any) {
-      console.warn('⚠️ Gagal membersihkan Upstash Redis via REST API:', e?.message);
     }
   }
 
-  try {
-    const apiPort = process.env.PORT || 3001;
-    await fetch(`http://localhost:${apiPort}/api/cache/clear`, { method: 'POST' });
-    logFn('⚡ Cache Redis jadwal berhasil dibersihkan via local API endpoint!');
-  } catch {
-    // Abaikan jika server API belum menyala
+  // Bersihkan juga cache di server API (lokal atau remote Render jika disetel)
+  const remoteApi = process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_URL || process.env.RENDER_API_URL;
+  const apiUrls = [
+    `http://localhost:${process.env.PORT || 3001}/api/cache/clear`,
+    remoteApi ? `${remoteApi.replace(/\/$/, '')}/api/cache/clear` : null,
+  ].filter(Boolean) as string[];
+
+  for (const apiUrl of apiUrls) {
+    try {
+      const res = await fetch(apiUrl, { method: 'POST' });
+      if (res.ok) {
+        logFn(`⚡ Cache RAM API (${apiUrl}) berhasil dibersihkan!`);
+        break;
+      }
+    } catch {
+      // Abaikan jika tidak dapat dijangkau
+    }
   }
 }
 

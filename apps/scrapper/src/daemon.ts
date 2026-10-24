@@ -116,15 +116,13 @@ async function startDaemon() {
       return;
     }
 
-    // Status sync setiap 5 menit
-    if (minuteCounter % 5 === 0) {
-      await performStatusSync('interval_5m');
-    }
-
-    // Today sync setiap 10 menit
+    // Tiap 10 menit: jalankan Today Sync (yang otomatis mencakup pre-sync status Cancel/Online)
     if (minuteCounter >= 10) {
       minuteCounter = 0;
       await performTodaySync('interval_10m');
+    } else if (minuteCounter % 5 === 0) {
+      // Pada interval 5 menit di antara Today Sync: jalankan quick Status Sync
+      await performStatusSync('interval_5m');
     }
   }, 60_000);
 }

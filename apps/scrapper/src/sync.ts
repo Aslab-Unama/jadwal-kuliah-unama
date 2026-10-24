@@ -100,8 +100,14 @@ export async function syncScheduleToDatabase(items: ScrapedScheduleItem[]): Prom
       if (item.dosen && !existing.dosen.includes(item.dosen)) {
         existing.dosen = `${existing.dosen} / ${item.dosen}`;
       }
-      // Jika salah satu status OnSchedule sedangkan yang lain cancel, prioritaskan yang aktif
-      if (!existing.status.includes('OnSchedule') && item.status.includes('OnSchedule')) {
+      // Update status: prioritaskan status Cancel / Online / Batal jika terdeteksi
+      const itemIsCancelOrOnline =
+        item.status.toLowerCase().includes('cancel') ||
+        item.status.toLowerCase().includes('online') ||
+        item.status.toLowerCase().includes('batal');
+      if (itemIsCancelOrOnline) {
+        existing.status = item.status;
+      } else if (!existing.status) {
         existing.status = item.status;
       }
     } else {

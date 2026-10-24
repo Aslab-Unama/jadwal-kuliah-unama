@@ -25,7 +25,7 @@ export const CACHE_KEYS = {
 
 // Cache TTL
 const DEFAULT_TTL_SECONDS = 86400 * 7; // 7 hari di Redis
-const L1_TTL_MS = 1000 * 60 * 60 * 24; // 24 jam di memori RAM lokal server
+const L1_TTL_MS = 1000 * 60; // 1 menit di memori RAM lokal server (agar cepat menangkap update jadwal)
 
 // L1 In-Process Memory Cache (Kecepatan: ~0.001 ms)
 let l1CacheData: unknown = null;
